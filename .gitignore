@@ -1,0 +1,31 @@
+# Using whitelisting based on https://www.howtogeek.com/devops/how-to-set-up-gitignore-as-a-whitelist/
+*
+!*/
+
+# track this file
+!.gitignore
+
+# whitelist
+!/.github/**/*
+!/.husky/**/*
+!/.vscode/**/*
+!/contracts/**/*
+!/docs/**/*
+!/docstatics/**/*
+!/doctemplates/**/*
+!/scripts/**/*
+!/test/**/*
+!/.env.example
+!/.eslintignore
+!/.eslintrc.json
+!/.lintstagedrc.json
+!/.npmignore
+!/.solcover.js
+!/.solhint.json
+!/commitlint.config.js
+!/hardhat.config.ts
+!/LICENCE
+!/package-lock.json
+!/package.json
+!/README.md
+!/tsconfig.json
