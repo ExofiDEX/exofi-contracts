@@ -1,0 +1,72 @@
+{
+	"env": {
+		"browser": false,
+		"es2022": true,
+		"mocha": true,
+		"node": true
+	},
+	"plugins": [
+		"@typescript-eslint"
+	],
+	"extends": [
+		"standard",
+		"eslint:recommended",
+		"plugin:node/recommended",
+		"plugin:@typescript-eslint/recommended"
+	],
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"ecmaVersion": "latest"
+	},
+	"rules": {
+		"@typescript-eslint/indent": ["error", "tab"],
+		"brace-style": ["error","allman"],
+		"indent": ["error","tab"],
+		"linebreak-style": [
+			"error",
+			"unix"
+		],
+		"node/no-missing-import": ["error", {
+			"allowModules": ["solidity-ast"],
+			"tryExtensions": [
+				".js",
+				".jsx",
+				".json",
+				".mjs",
+				".node",
+				".ts",
+				".tsx"
+			]
+		}],
+		"node/no-unsupported-features/es-syntax": [
+			"error",
+			{
+				"ignores": [
+					"modules"
+				]
+			}
+		],
+		"no-tabs": [
+			"error",
+			{
+				"allowIndentationTabs": true
+			}
+		],
+		"quotes": [
+			"error",
+			"double"
+		],
+		"semi": [
+			"error",
+			"always"
+		],
+		"space-before-function-paren": [
+			"error",
+			{
+				"anonymous": "always",
+				"named": "never",
+				"asyncArrow": "always"
+			}
+		]
+	}
+}

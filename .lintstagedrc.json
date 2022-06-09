@@ -1,0 +1,4 @@
+{
+	"*.js": "npx --no -- eslint . --format table --fix",
+	"*.ts": "npx --no -- eslint . --format table --fix"
+}
