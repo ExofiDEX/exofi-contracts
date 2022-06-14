@@ -15,9 +15,87 @@ contract Fermion is IFermion, ERC20Burnable, Ownable
 	// solhint-disable-next-line no-empty-blocks
 	constructor() ERC20Burnable("Fermion", "EXOFI") {}
 
+	/// @inheritdoc ERC20
+	function approve(address spender, uint256 amount) override (IFermion, ERC20) public returns (bool)
+	{
+		return ERC20.approve(spender, amount);
+	}
+
+	/// @inheritdoc ERC20Burnable
+	function burn(uint256 amount) override (IFermion, ERC20Burnable) public
+	{
+		ERC20Burnable.burn(amount);
+	}
+
+	/// @inheritdoc ERC20Burnable
+	function burnFrom(address account, uint256 amount) override (IFermion, ERC20Burnable) public
+	{
+		ERC20Burnable.burnFrom(account, amount);
+	}
+
+	/// @inheritdoc ERC20
+	function decreaseAllowance(address spender, uint256 subtractedValue) override (IFermion, ERC20) public returns (bool)
+	{
+		return ERC20.decreaseAllowance(spender, subtractedValue);
+	}
+
+	/// @inheritdoc ERC20
+	function increaseAllowance(address spender, uint256 addedValue) override (IFermion, ERC20) public returns (bool)
+	{
+		return ERC20.increaseAllowance(spender, addedValue);
+	}
+
 	/// @notice Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
-	function mint(address to, uint256 amount) public override onlyOwner
+	function mint(address to, uint256 amount) override public onlyOwner
 	{
 		_mint(to, amount);
+	}
+
+	/// @inheritdoc ERC20
+	function transfer(address to, uint256 amount) override (IFermion, ERC20) public returns (bool)
+	{
+		return ERC20.transfer(to, amount);
+	}
+
+	/// @inheritdoc ERC20
+	function transferFrom(address from, address to, uint256 amount) override (IFermion, ERC20) public returns (bool)
+	{
+		return ERC20.transferFrom(from, to, amount);
+	}
+
+	/// @inheritdoc ERC20
+	function allowance(address owner, address spender) override (IFermion, ERC20) public view returns (uint256)
+	{
+		return ERC20.allowance(owner, spender);
+	}
+
+	/// @inheritdoc ERC20
+	function balanceOf(address account) override (IFermion, ERC20) public view returns (uint256)
+	{
+		return ERC20.balanceOf(account);
+	}
+
+	/// @inheritdoc ERC20
+	function name() override (IFermion, ERC20) public view returns (string memory)
+	{
+		return ERC20.name();
+	}
+
+	/// @inheritdoc ERC20
+	function symbol() override (IFermion, ERC20) public view returns (string memory)
+	{
+		return ERC20.symbol();
+	}
+
+	/// @inheritdoc ERC20
+	function totalSupply() override (IFermion, ERC20) public view returns (uint256)
+	{
+		return ERC20.totalSupply();
+	}
+
+	/// @inheritdoc ERC20
+	function decimals() override (IFermion, ERC20) public pure returns (uint8)
+	{
+		return ERC20.decimals();
 	}
 }
