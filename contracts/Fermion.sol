@@ -51,6 +51,12 @@ contract Fermion is IFermion, ERC20Burnable, Ownable
 		_mint(to, amount);
 	}
 
+	/// @inheritdoc Ownable
+	function renounceOwnership() override(IFermion, Ownable) public
+	{
+		Ownable.renounceOwnership();
+	}
+
 	/// @inheritdoc ERC20
 	function transfer(address to, uint256 amount) override (IFermion, ERC20) public returns (bool)
 	{
@@ -63,10 +69,16 @@ contract Fermion is IFermion, ERC20Burnable, Ownable
 		return ERC20.transferFrom(from, to, amount);
 	}
 
-	/// @inheritdoc ERC20
-	function allowance(address owner, address spender) override (IFermion, ERC20) public view returns (uint256)
+	/// @inheritdoc Ownable
+	function transferOwnership(address newOwner) override(IFermion, Ownable) public
 	{
-		return ERC20.allowance(owner, spender);
+		Ownable.transferOwnership(newOwner);
+	}
+
+	/// @inheritdoc ERC20
+	function allowance(address ownerAddress, address spenderAddress) override (IFermion, ERC20) public view returns (uint256)
+	{
+		return ERC20.allowance(ownerAddress, spenderAddress);
 	}
 
 	/// @inheritdoc ERC20
@@ -79,6 +91,12 @@ contract Fermion is IFermion, ERC20Burnable, Ownable
 	function name() override (IFermion, ERC20) public view returns (string memory)
 	{
 		return ERC20.name();
+	}
+
+	/// @inheritdoc Ownable
+	function owner() override(IFermion, Ownable) public view returns (address)
+	{
+		return Ownable.owner();
 	}
 
 	/// @inheritdoc ERC20

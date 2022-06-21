@@ -74,6 +74,11 @@ interface IFermion
 	/// @notice Returns the decimals of the token.
 	/// @return The decimals for the token.
 	function decimals() external pure returns (uint8);
+	// -------------------- IOwnable --------------------
+	function renounceOwnership() external;
+	function transferOwnership(address newOwner) external;
+	function owner() external view returns (address);
+
 	// -------------------- IERC20 --------------------
 	/**
 	* @dev Sets `amount` as the allowance of `spender` over the caller's tokens.

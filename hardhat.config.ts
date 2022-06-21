@@ -4,6 +4,9 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
+import "hardhat-abi-exporter";
+import "hardhat-deploy";
+import "hardhat-deploy-ethers";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "solidity-docgen";
@@ -37,6 +40,14 @@ const accounts = {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
+	abiExporter:
+	{
+		path: "./abi",
+		clear: false,
+		flat: true
+		// only: [],
+		// except: []
+	},
 	docgen: {
 		pages: pa, // "files",
 		templates: "doctemplates"
@@ -54,6 +65,16 @@ const config: HardhatUserConfig = {
 			}
 		]
 	},
+	namedAccounts:
+	{
+		deployer: {
+			default: process.env.OWNER ?? 0
+		},
+		dev: {
+			// Default to 1
+			default: process.env.DEVELOPER ?? 1
+		}
+	},
 	networks: {
 		ropsten: {
 			url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
@@ -61,11 +82,13 @@ const config: HardhatUserConfig = {
 		},
 		goerli: {
 			url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
-			accounts
+			accounts,
+			gasPrice: 50000000,
+			gasMultiplier: 2
 		}
 	},
 	gasReporter: {
-		enabled: process.env.REPORT_GAS !== undefined,
+		enabled: process.env.REPORT_GAS === "true",
 		coinmarketcap: process.env.COINMARKETCAP_API_KEY,
 		currency: "EUR",
 		excludeContracts: [
