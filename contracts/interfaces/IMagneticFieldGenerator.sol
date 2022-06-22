@@ -39,6 +39,7 @@ interface IMagneticFieldGenerator
 	function getFermionContract() external view returns (IFermion);
 	function getFermionPerBlock() external view returns (uint256);
 	function getStartBlock() external view returns (uint256);
+	function migrator() external view returns(IMigratorDevice);
 	function owner() external view returns (address);
 	function pendingFermion(uint256 pid, address user) external view returns (uint256);
 	function poolInfo(uint256 pid) external view returns (PoolInfo memory);

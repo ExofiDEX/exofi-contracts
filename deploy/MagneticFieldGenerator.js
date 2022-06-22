@@ -20,15 +20,22 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 		await (await fermion.connect(dep).transferOwnership(address)).wait();
 	}
 
-	const masterChef = await ethers.getContract("MagneticFieldGenerator");
-	if (await masterChef.owner() !== dev)
+	const mfg = await ethers.getContract("MagneticFieldGenerator");
+	if (await mfg.owner() !== dev.address)
 	{
 		// Transfer ownership of MasterChef to dev
 		console.log("Transfer ownership of MagneticFieldGenerator to dev");
-		await (await masterChef.connect(dep).transferOwnership(dev)).wait();
+		await (await mfg.connect(dep).transferOwnership(dev)).wait();
+	}
+
+	const uniMig = await ethers.getContract("UniMigrator");
+	if (await mfg.migrator() !== uniMig.address)
+	{
+		// Set Migrator to UniMigrator
+		console.log("Set Migrator of MagneticFieldGenerator to UniMigrator");
+		await (await mfg.connect(dep).setMigrator(uniMig)).wait();
 	}
 };
 
 module.exports.tags = ["MagneticFieldGenerator"];
-// module.exports.dependencies = ["UniswapV2Factory", "UniswapV2Router02", "SushiToken"];
-module.exports.dependencies = ["Fermion"];
+module.exports.dependencies = ["Fermion", "UniMigrator"];

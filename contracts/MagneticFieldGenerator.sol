@@ -45,7 +45,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	PoolInfo[] private _poolInfo;
 
 	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
-	IMigratorDevice public migrator;
+	IMigratorDevice private _migrator;
 
 	// Info of each user that stakes LP tokens.
 	mapping(uint256 => mapping(address => UserInfo)) public userInfo;
@@ -165,12 +165,12 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	// Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
 	function migrate(uint256 pid) override public
 	{
-		require(address(migrator) != address(0), "migrate: no migrator");
+		require(address(_migrator) != address(0), "migrate: no migrator");
 		PoolInfo storage pool = _poolInfo[pid];
 		IERC20 lpToken = pool.lpToken;
 		uint256 bal = lpToken.balanceOf(address(this));
-		lpToken.safeApprove(address(migrator), bal);
-		IERC20 newLpToken = migrator.migrate(lpToken);
+		lpToken.safeApprove(address(_migrator), bal);
+		IERC20 newLpToken = IERC20(_migrator.migrate(lpToken));
 		require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
 		pool.lpToken = newLpToken;
 	}
@@ -195,7 +195,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	// Set the migrator contract. Can only be called by the owner.
 	function setMigrator(IMigratorDevice migratorContract) override public onlyOwner
 	{
-		migrator = migratorContract;
+		_migrator = migratorContract;
 	}
 
 	// Update dev address by the previous dev.
@@ -292,6 +292,12 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	function getStartBlock() public override view returns (uint256)
 	{
 		return _startBlock;
+	}
+
+	/// @notice Returns the current migrator.
+	function migrator() override public view returns(IMigratorDevice)
+	{
+		return _migrator;
 	}
 
 	/// @notice Returns the address of the current owner.

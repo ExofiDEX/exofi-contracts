@@ -7,6 +7,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ADDRESS_ZERO, AdvanceBlockTo, GetBlockNumber, PANIC_CODES } from "./helpers";
 
 import { IERC20, IFermion, IMagneticFieldGenerator } from "../typechain-types";
+import { experimentalAddHardhatNetworkMessageTraceHook } from "hardhat/config";
 
 describe("MagneticFieldGenerator", () =>
 {
@@ -58,12 +59,77 @@ describe("MagneticFieldGenerator", () =>
 			const fermionPerBlock = await MagneticFieldGenerator().getFermionPerBlock();
 			const startBlock = await MagneticFieldGenerator().getStartBlock();
 			const owner = await Fermion.owner();
+			const migrator = await MagneticFieldGenerator().migrator();
 
 			expect(fermionAddress).to.equal(Fermion.address);
 			expect(devaddr).to.equal(Dev.address);
 			expect(fermionPerBlock).to.equal(100);
 			expect(startBlock).to.equal(0);
 			expect(owner).to.equal(MagneticFieldGenerator().address);
+			expect(migrator).to.equal(ADDRESS_ZERO);
+		});
+
+		it("MagneticFieldGenerator.setMigrator: Should set correct migrator", async () =>
+		{
+			const fakeUniToken = await ERC20MockFactory.deploy("UniSwap Token", "UNI", 1000) as IERC20;
+			const uniMigratorFactory = await ethers.getContractFactory("UniMigratorMock");
+			await fakeUniToken.deployed();
+			const uniMigrator = await uniMigratorFactory.deploy(Bob.address, fakeUniToken.address);
+			await uniMigrator.deployed();
+
+			await MagneticFieldGenerator().setMigrator(uniMigrator.address);
+
+			expect(await MagneticFieldGenerator().migrator()).to.equal(uniMigrator.address);
+		});
+
+		it("MagneticFieldGenerator.migrate: Should not migrate if no migrator set", async () =>
+		{
+			const result = MagneticFieldGenerator().migrate(0);
+
+			await expect(result).to.revertedWith("migrate: no migrator");
+		});
+
+		it("MagneticFieldGenerator.migrate: Should migrate correctly", async () =>
+		{
+			const fakeUniToken = await ERC20MockFactory.deploy("UniSwap Token", "UNI", 1000) as IERC20;
+			const uniMigratorFactory = await ethers.getContractFactory("UniMigratorMock");
+			await fakeUniToken.deployed();
+			const uniMigrator = await uniMigratorFactory.deploy(Bob.address, fakeUniToken.address);
+			await uniMigrator.deployed();
+			await MagneticFieldGenerator().setMigrator(uniMigrator.address);
+			await MagneticFieldGenerator().add(100, fakeUniToken.address);
+			await fakeUniToken.transfer(MagneticFieldGenerator().address, 1000);
+
+			await MagneticFieldGenerator().connect(Alice).migrate(0);
+
+			const balanceOfBob = await fakeUniToken.balanceOf(Bob.address);
+			const balanceOfMfg = await fakeUniToken.balanceOf(MagneticFieldGenerator().address);
+			const poolInfo = await MagneticFieldGenerator().poolInfo(0);
+			expect(balanceOfBob).to.equal(1000);
+			expect(balanceOfMfg).to.equal(0);
+			expect(poolInfo.lpToken).to.not.equal(fakeUniToken.address);
+		});
+
+		it("MagneticFieldGenerator.migrate: Should not migrate same pool multible times", async () =>
+		{
+			const fakeUniToken = await ERC20MockFactory.deploy("UniSwap Token", "UNI", 1000) as IERC20;
+			const uniMigratorFactory = await ethers.getContractFactory("UniMigratorMock");
+			await fakeUniToken.deployed();
+			const uniMigrator = await uniMigratorFactory.deploy(Bob.address, fakeUniToken.address);
+			await uniMigrator.deployed();
+			await MagneticFieldGenerator().setMigrator(uniMigrator.address);
+			await MagneticFieldGenerator().add(100, fakeUniToken.address);
+
+			await fakeUniToken.transfer(MagneticFieldGenerator().address, 500);
+			await MagneticFieldGenerator().migrate(0);
+			expect(await fakeUniToken.balanceOf(Bob.address)).to.equal(500);
+			expect(await fakeUniToken.balanceOf(MagneticFieldGenerator().address)).to.equal(0);
+
+			await fakeUniToken.transfer(MagneticFieldGenerator().address, 500);
+			const result = MagneticFieldGenerator().migrate(0);
+
+			// This error is thrown due the fact that the FakeERC20 token we use does not implement approve.
+			await expect(result).to.revertedWith("function selector was not recognized and there's no fallback function");
 		});
 
 		it("MagneticFieldGenerator.transferDevelopment: Should only allow developer to transfer devlopment", async () =>
