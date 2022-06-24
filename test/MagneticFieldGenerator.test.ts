@@ -5,9 +5,7 @@ import { BigNumber, Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { ADDRESS_ZERO, AdvanceBlockTo, GetBlockNumber, PANIC_CODES } from "./helpers";
-
 import { IERC20, IFermion, IMagneticFieldGenerator } from "../typechain-types";
-import { experimentalAddHardhatNetworkMessageTraceHook } from "hardhat/config";
 
 describe("MagneticFieldGenerator", () =>
 {
@@ -80,6 +78,35 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().setMigrator(uniMigrator.address);
 
 			expect(await MagneticFieldGenerator().migrator()).to.equal(uniMigrator.address);
+		});
+
+		it("MagneticFieldGenerator.setMigrator: Should not allow non-owner to set migrator", async () =>
+		{
+			const fakeUniToken = await ERC20MockFactory.deploy("UniSwap Token", "UNI", 1000) as IERC20;
+			const uniMigratorFactory = await ethers.getContractFactory("UniMigratorMock");
+			await fakeUniToken.deployed();
+			const uniMigrator = await uniMigratorFactory.deploy(Bob.address, fakeUniToken.address);
+			await uniMigrator.deployed();
+
+			const result = MagneticFieldGenerator().connect(Bob).setMigrator(uniMigrator.address);
+
+			await expect(result).to.revertedWith("Ownable: caller is not the owner");
+		});
+
+		it("MagneticFieldGenerator.setMigrator: Should not allow non-owner to call migrate", async () =>
+		{
+			const fakeUniToken = await ERC20MockFactory.deploy("UniSwap Token", "UNI", 1000) as IERC20;
+			const uniMigratorFactory = await ethers.getContractFactory("UniMigratorMock");
+			await fakeUniToken.deployed();
+			const uniMigrator = await uniMigratorFactory.deploy(Bob.address, fakeUniToken.address);
+			await uniMigrator.deployed();
+			await MagneticFieldGenerator().setMigrator(uniMigrator.address);
+			await MagneticFieldGenerator().add(100, fakeUniToken.address);
+			await fakeUniToken.transfer(MagneticFieldGenerator().address, 1000);
+
+			const result = MagneticFieldGenerator().connect(Bob).migrate(0);
+
+			await expect(result).to.revertedWith("Ownable: caller is not the owner");
 		});
 
 		it("MagneticFieldGenerator.migrate: Should not migrate if no migrator set", async () =>

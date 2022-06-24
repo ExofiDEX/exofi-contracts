@@ -7,10 +7,8 @@ import "./interfaces/IFermion.sol";
 
 /**
 * @dev Implementation of the {IFermion} interface.
-* The IFermion interface extends the IERC20, IERC20Metadata, IERC20Burnable, IOwnable interfaces.
-*
 */
-contract Fermion is ERC20Burnable, Ownable, IFermion
+contract Fermion is IFermion, ERC20Burnable, Ownable
 {
 	// solhint-disable-next-line no-empty-blocks
 	constructor() ERC20Burnable("Fermion", "EXOFI") {}

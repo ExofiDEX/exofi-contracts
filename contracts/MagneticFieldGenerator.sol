@@ -163,7 +163,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	}
 
 	// Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-	function migrate(uint256 pid) override public
+	function migrate(uint256 pid) override public onlyOwner
 	{
 		require(address(_migrator) != address(0), "migrate: no migrator");
 		PoolInfo storage pool = _poolInfo[pid];
