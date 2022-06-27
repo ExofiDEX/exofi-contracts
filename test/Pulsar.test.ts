@@ -181,7 +181,7 @@ describe("Pulsar", () =>
 			// Act
 			const holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			// Assert
-			expect(holdings).to.equal(327500);
+			expect(holdings).to.equal(333333);
 		});
 
 		it("Pulsar.getClaimableAmount: Should allow sender to see that there are no holdings after the final block", async () =>
@@ -229,38 +229,38 @@ describe("Pulsar", () =>
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase1Reward + 35);
-			// 2. Block os Phase 2
+			// 2. Block of Phase 2
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase1Reward + 70);
 			// Last Block of Phase 2
-			const maxPhase2Reward = 35 * 2500 + maxPhase1Reward;
+			const maxPhase2Reward = 35 * 2500 + maxPhase1Reward + 833; // 833: Over the duration of phase 2 the rounding error for phase1 got solved out
 			await AdvanceBlockTo(startBlockNumber + 1000 + 5000);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase2Reward);
 			// 1. Block of Phase 3
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
-			expect(holdings).to.equal(maxPhase2Reward + 17);
+			expect(holdings).to.equal(maxPhase2Reward + 18);
 			// 2. Block os Phase 3
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
-			expect(holdings).to.equal(maxPhase2Reward + 34);
+			expect(holdings).to.equal(maxPhase2Reward + 35);
 			// Last Block of Phase 3
-			const maxPhase3Reward = 17 * 2500 + maxPhase2Reward;
+			const maxPhase3Reward = 17 * 2500 + maxPhase2Reward + 1667; // 1667: Over the duration of phase 2 the rounding error for phase2 got solved out;
 			await AdvanceBlockTo(startBlockNumber + 1000 + 7500);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase3Reward);
 			// 1. Block of Phase 4
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
-			expect(holdings).to.equal(maxPhase3Reward + 8);
+			expect(holdings).to.equal(maxPhase3Reward + 9);
 			// 2. Block os Phase 3
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
-			expect(holdings).to.equal(maxPhase3Reward + 16);
+			expect(holdings).to.equal(maxPhase3Reward + 18);
 			// Last Block of Phase 3
-			const maxPhase4Reward = 8 * 2500 + maxPhase3Reward;
+			const maxPhase4Reward = 8 * 2500 + maxPhase3Reward + 3333; // 3333: Over the duration of phase 3 the rounding error for phase2 got solved out;
 			await AdvanceBlockTo(startBlockNumber + 1000 + 10000);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase4Reward);
@@ -318,8 +318,8 @@ describe("Pulsar", () =>
 			// Act
 			await Pulsar().connect(Bob).claim();
 			// Assert
-			expect(await Token.balanceOf(Bob.address)).to.equal(327500);
-			expect(await Token.balanceOf(Pulsar().address)).to.equal(1000000 - 327500);
+			expect(await Token.balanceOf(Bob.address)).to.equal(333333);
+			expect(await Token.balanceOf(Pulsar().address)).to.equal(1000000 - 333333);
 		});
 
 		it("Pulsar.claim: Should not allow non-benefitary to claim", async () =>
