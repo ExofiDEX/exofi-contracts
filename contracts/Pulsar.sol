@@ -3,8 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable.sol";
 import "./interfaces/IPulsar.sol";
+import "@exoda/contracts/access/Ownable.sol";
 
-contract Pulsar is IPulsar
+contract Pulsar is IPulsar, Ownable
 {
 	uint256 private immutable _startBlockPhase1;
 	uint256 private immutable _startBlockPhase2;
@@ -12,10 +13,17 @@ contract Pulsar is IPulsar
 	uint256 private immutable _startBlockPhase4;
 	uint256 private immutable _endBlock;
 	uint256 private immutable _finalBlock;
+	uint256 private _benefitaryCount;
+	uint256 private _amountPhase1;
+	uint256 private _amountPhase2;
+	uint256 private _amountPhase3;
+	uint256 private _amountPhase4;
+	mapping(address => uint256) private _lastWithdraw;
 	IERC20Burnable private immutable _token;
 
-	constructor(uint256 startBlock, uint256 endBlock, uint256 finalizingBlock, IERC20Burnable token)
+	constructor(uint256 startBlock, uint256 endBlock, uint256 finalizingBlock, IERC20Burnable token) Ownable()
 	{
+		// Split the start and end intervall into 4 parts.
 		uint256 part = (endBlock - startBlock) / 4;
 		_startBlockPhase1 = startBlock;
 		_startBlockPhase2 = startBlock + part;
@@ -24,5 +32,79 @@ contract Pulsar is IPulsar
 		_endBlock = endBlock;
 		_finalBlock = finalizingBlock;
 		_token = token;
+	}
+
+	function loadToken(uint256 amount) override public onlyOwner
+	{
+		require(block.number < _startBlockPhase1, "Pulsar: Can only set before start block"); // solhint-disable-line reason-string
+		uint256 fraction = (amount * 16) / 15;
+		_amountPhase1 = fraction / 2;
+		_amountPhase2 = fraction / 4;
+		_amountPhase3 = fraction / 8;
+		_amountPhase4 = amount - (_amountPhase1 + _amountPhase2 + _amountPhase3);
+
+		uint256 allowance = _token.allowance(owner(), address(this));
+		require(allowance == amount, "Pulsar: Allowance must be equal to amount");  // solhint-disable-line reason-string
+		_token.transferFrom(owner(), address(this), amount);
+	}
+
+	/// @notice Runs the last task after reaching the final block.
+	function die() override public
+	{
+		require(block.number > _finalBlock, "Pulsar: Can only be killed after final block"); // solhint-disable-line reason-string
+		uint256 remainingAmount = _token.balanceOf(address(this));
+		_token.burn(remainingAmount);
+	}
+
+	/// @notice Adds a benefitary as long as the startBlock is not reached.
+	function addBenefitary(address benefitary) override public onlyOwner
+	{
+		require(block.number < _startBlockPhase1, "Pulsar: Can only added before start block"); // solhint-disable-line reason-string
+		_lastWithdraw[benefitary] = _startBlockPhase1;
+		++_benefitaryCount;
+	}
+
+	function claim() override public
+	{
+		address sender = msg.sender;
+		require(_lastWithdraw[sender] > 0, "Pulsar: Only benefitaries can claim"); // solhint-disable-line reason-string
+		uint256 amount = getClaimableAmount();
+		_lastWithdraw[sender] = block.number;
+		_token.transfer(sender, amount);
+	}
+
+	function getClaimableAmount() override public view returns(uint256)
+	{
+		uint256 lw = _lastWithdraw[msg.sender];
+		uint256 currentBlock = block.number;
+		uint256 bc = _benefitaryCount;
+
+		if (lw < _startBlockPhase1)
+		{
+			return 0; // Not in list
+		}
+		if ((currentBlock < _startBlockPhase1) || (currentBlock > _finalBlock))
+		{
+			return 0; // Not started yet or final Block reached.
+		}
+
+		uint256 ph1Blocks =_max(_min(_startBlockPhase2, currentBlock), _startBlockPhase1) - _min(_max(lw, _startBlockPhase1), _startBlockPhase2);
+		uint256 ph2Blocks = _max(_min(_startBlockPhase3, currentBlock), _startBlockPhase2) - _min(_max(lw, _startBlockPhase2), _startBlockPhase3);
+		uint256 ph3Blocks = _max(_min(_startBlockPhase4, currentBlock), _startBlockPhase3) - _min(_max(lw, _startBlockPhase3), _startBlockPhase4);
+		uint256 ph4Blocks = _max(_min(_endBlock, currentBlock), _startBlockPhase4) -_min(_max(lw, _startBlockPhase4), _endBlock);
+		return (ph1Blocks * ((_amountPhase1 / (_startBlockPhase2 - _startBlockPhase1)) / bc)) +
+			(ph2Blocks * ((_amountPhase2 / (_startBlockPhase3 - _startBlockPhase2)) / bc)) +
+			(ph3Blocks * ((_amountPhase3 / (_startBlockPhase4 - _startBlockPhase3)) / bc)) +
+			(ph4Blocks * ((_amountPhase4 / (_endBlock - _startBlockPhase4)) / bc));
+	}
+
+	function _min(uint256 a, uint256 b) private pure returns(uint256)
+	{
+		return a <= b ? a : b;
+	}
+
+	function _max(uint256 a, uint256 b) private pure returns(uint256)
+	{
+		return a >= b ? a : b;
 	}
 }
