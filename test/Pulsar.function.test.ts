@@ -88,32 +88,31 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			let ines: { claimed: number, pause: number, wait: number } = { claimed: 0, pause: 7000, wait: 0 };
 			let jan: { claimed: number, pause: number, wait: number } = { claimed: 0, pause: 11001, wait: 0 };
 			// Nothing to claim before the start
-			await AdvanceBlockTo(startBlockNumber + 990);
+			await AdvanceBlockTo(startBlockNumber + 950);
 			let start = await GetBlockNumber();
 			let until = (startBlockNumber + 1000) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("preStart", until, 0, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
-
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(0, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			blockcount = 0; // We start blockcount now...
 			// Claim for Phase1
 			start = await GetBlockNumber();
 			until = (startBlockNumber + 3500) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("phase 1", until, 23, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(1, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// Claim for Phase2
 			start = await GetBlockNumber();
 			until = (startBlockNumber + 6000) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("phase 2", until, 11, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(2, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// Claim for Phase3
 			start = await GetBlockNumber();
 			until = (startBlockNumber + 8500) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("phase 3", until, 5, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(3, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// Claim for Phase4
 			start = await GetBlockNumber();
 			until = (startBlockNumber + 11000) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("phase 4", until, 2, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(4, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// Nothing to claim for Final
 			start = await GetBlockNumber();
 			until = (startBlockNumber + 12000) - start;
-			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest("final", until, 0, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
+			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(5, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// After final all has to be 0
 			expect(await Pulsar().connect(Alice).getClaimableAmount()).to.equal(0);
 			expect(await Pulsar().connect(Bob).getClaimableAmount()).to.equal(0);
@@ -121,10 +120,10 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			expect(await Pulsar().connect(Dave).getClaimableAmount()).to.equal(0);
 			expect(await Pulsar().connect(Elise).getClaimableAmount()).to.equal(0);
 			expect(await Pulsar().connect(Fabian).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Gabi).getClaimableAmount()).to.equal(2000);
+			expect(await Pulsar().connect(Gabi).getClaimableAmount()).to.equal(3000);
 			expect(await Pulsar().connect(Hank).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Ines).getClaimableAmount()).to.equal(7500);
-			expect(await Pulsar().connect(Jan).getClaimableAmount()).to.equal(102500);
+			expect(await Pulsar().connect(Ines).getClaimableAmount()).to.equal(10500);
+			expect(await Pulsar().connect(Jan).getClaimableAmount()).to.equal(111111);
 			await AdvanceBlock();
 			expect(await Pulsar().connect(Alice).getClaimableAmount()).to.equal(0);
 			expect(await Pulsar().connect(Bob).getClaimableAmount()).to.equal(0);
@@ -139,9 +138,12 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			await StartAutomine();
 		});
 
-		async function RunClaimTest(desc: string,
+		async function RunClaimTest(phase: number,
 			until: number,
-			claim: number,
+			claimPerBlock1: number,
+			claimPerBlock2: number,
+			claimPerBlock3: number,
+			claimPerBlock4: number,
 			bob: { claimed: number, pause: number, wait: number },
 			carol: { claimed: number, pause: number, wait: number },
 			dave: { claimed: number, pause: number, wait: number },
@@ -155,6 +157,34 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 		{
 			for (let i = 1; i <= until; ++i)
 			{
+				let ph1Blocks = 0;
+				let ph2Blocks = 0;
+				let ph3Blocks = 0;
+				let ph4Blocks = 0;
+				// All claimable till now.
+				if (phase === 1) ph1Blocks = i;
+				if (phase === 2)
+				{
+					ph1Blocks = 2500; ph2Blocks = i;
+				}
+				if (phase === 3)
+				{
+					ph1Blocks = 2500; ph2Blocks = 2500; ph3Blocks = i;
+				}
+				if (phase === 4)
+				{
+					ph1Blocks = 2500; ph2Blocks = 2500; ph3Blocks = 2500; ph4Blocks = i;
+				}
+				if (phase > 4)
+				{
+					ph1Blocks = 2500; ph2Blocks = 2500; ph3Blocks = 2500; ph4Blocks = 2500;
+				}
+
+				const claimdecimal = (((ph1Blocks * claimPerBlock1) +
+					(ph2Blocks * claimPerBlock2) +
+					(ph3Blocks * claimPerBlock3) +
+					(ph4Blocks * claimPerBlock4)) / 9);
+				const claim = Math.floor(claimdecimal);
 				++blockcount;
 				({ userClaims: bob } = await UserClaim(blockcount, claim, Bob, bob));
 				({ userClaims: carol } = await UserClaim(blockcount, claim, Carol, carol));
@@ -165,7 +195,7 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 				({ userClaims: hank } = await UserClaim(blockcount, claim, Hank, hank));
 				({ userClaims: ines } = await UserClaim(blockcount, claim, Ines, ines));
 				({ userClaims: jan } = await UserClaim(blockcount, claim, Jan, jan));
-				console.debug(`Run ${desc} (${i}/${until}/${blockcount}): Expect Bob: ${bob.claimed}, Carol: ${carol.claimed}, Dave: ${dave.claimed}, Elise: ${elise.claimed}, Fabian: ${fabian.claimed}, Gabi: ${gabi.claimed}, Hank: ${hank.claimed}, Ines: ${ines.claimed}, Jan: ${jan.claimed}`);
+				console.debug(`Run Phase ${phase} (${i}/${until}/${blockcount}): Expect Bob: ${bob.claimed}, Carol: ${carol.claimed}, Dave: ${dave.claimed}, Elise: ${elise.claimed}, Fabian: ${fabian.claimed}, Gabi: ${gabi.claimed}, Hank: ${hank.claimed}, Ines: ${ines.claimed}, Jan: ${jan.claimed}`);
 				await AdvanceBlock();
 				expect(await Token.balanceOf(Alice.address)).to.equal(0);
 				expect(await Token.balanceOf(Bob.address)).to.equal(bob.claimed);
@@ -187,12 +217,7 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			if (i % userClaims.pause === 0)
 			{
 				await Pulsar().connect(user).claim();
-				userClaims.claimed += userClaims.wait + claim;
-				userClaims.wait = 0;
-			}
-			else
-			{
-				userClaims.wait += claim;
+				userClaims.claimed = claim;
 			}
 			return { userClaims };
 		}

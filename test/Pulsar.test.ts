@@ -221,7 +221,7 @@ describe("Pulsar", () =>
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(142);
 			// Last Block of Phase 1
-			const maxPhase1Reward = 71 * 2500;
+			const maxPhase1Reward = 71 * 2500; // 213/3 = 71 -> No rounding error.
 			await AdvanceBlockTo(startBlockNumber + 1000 + 2500);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase1Reward);
@@ -234,7 +234,7 @@ describe("Pulsar", () =>
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase1Reward + 70);
 			// Last Block of Phase 2
-			const maxPhase2Reward = 35 * 2500 + maxPhase1Reward + 833; // 833: Over the duration of phase 2 the rounding error for phase1 got solved out
+			const maxPhase2Reward = 35 * 2500 + maxPhase1Reward + 833; // 106/3 = 35.3333 -> 0.3333 * 2500 = 833.325
 			await AdvanceBlockTo(startBlockNumber + 1000 + 5000);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase2Reward);
@@ -245,9 +245,9 @@ describe("Pulsar", () =>
 			// 2. Block os Phase 3
 			await AdvanceBlock();
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
-			expect(holdings).to.equal(maxPhase2Reward + 35);
+			expect(holdings).to.equal(maxPhase2Reward + 36);
 			// Last Block of Phase 3
-			const maxPhase3Reward = 17 * 2500 + maxPhase2Reward + 1667; // 1667: Over the duration of phase 2 the rounding error for phase2 got solved out;
+			const maxPhase3Reward = 18 * 2500 + maxPhase2Reward; // 54/3 = 18 -> No rounding error.
 			await AdvanceBlockTo(startBlockNumber + 1000 + 7500);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase3Reward);
@@ -260,7 +260,7 @@ describe("Pulsar", () =>
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase3Reward + 18);
 			// Last Block of Phase 3
-			const maxPhase4Reward = 8 * 2500 + maxPhase3Reward + 3333; // 3333: Over the duration of phase 3 the rounding error for phase2 got solved out;
+			const maxPhase4Reward = 9 * 2500 + maxPhase3Reward; // 27/3 = 9 -> No rounding error.
 			await AdvanceBlockTo(startBlockNumber + 1000 + 10000);
 			holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			expect(holdings).to.equal(maxPhase4Reward);
@@ -317,6 +317,36 @@ describe("Pulsar", () =>
 			await AdvanceBlockTo(startBlockNumber + 11999);
 			// Act
 			await Pulsar().connect(Bob).claim();
+			// Assert
+			expect(await Token.balanceOf(Bob.address)).to.equal(333333);
+			expect(await Token.balanceOf(Pulsar().address)).to.equal(1000000 - 333333);
+		});
+
+		it("Pulsar.claim: Should allow sender to claim his holdings multible times", async () =>
+		{
+			// Arrange
+			await Token.approve(Pulsar().address, 1000000);
+			await Pulsar().loadToken(1000000);
+			await Pulsar().addBenefitary(Bob.address);
+			await Pulsar().addBenefitary(Carol.address);
+			await Pulsar().addBenefitary(Dave.address);
+			await AdvanceBlockTo(startBlockNumber + 1000);
+			// Act
+			await Pulsar().connect(Bob).claim();
+			expect(await Token.balanceOf(Bob.address)).to.equal(71);
+			await AdvanceBlockTo(startBlockNumber + 3499); // End of Phase 1
+			await Pulsar().connect(Bob).claim();
+			expect(await Token.balanceOf(Bob.address)).to.equal(177500);
+			await AdvanceBlockTo(startBlockNumber + 5999); // End of Phase 2
+			await Pulsar().connect(Bob).claim();
+			expect(await Token.balanceOf(Bob.address)).to.equal(265833);
+			await AdvanceBlockTo(startBlockNumber + 8499); // End of Phase 3
+			await Pulsar().connect(Bob).claim();
+			expect(await Token.balanceOf(Bob.address)).to.equal(310833);
+			await AdvanceBlockTo(startBlockNumber + 10999); // End of Phase 4
+			await Pulsar().connect(Bob).claim();
+			expect(await Token.balanceOf(Bob.address)).to.equal(333333);
+			await AdvanceBlockTo(startBlockNumber + 11000);
 			// Assert
 			expect(await Token.balanceOf(Bob.address)).to.equal(333333);
 			expect(await Token.balanceOf(Pulsar().address)).to.equal(1000000 - 333333);
