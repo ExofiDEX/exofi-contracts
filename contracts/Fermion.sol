@@ -10,12 +10,17 @@ import "./interfaces/IFermion.sol";
 */
 contract Fermion is IFermion, ERC20Burnable, Ownable
 {
-	// solhint-disable-next-line no-empty-blocks
-	constructor() ERC20Burnable("Fermion", "EXOFI") {}
+	uint256 private constant _MAX_SUPPLY = (1000000000 * (10**18));
+
+	constructor() ERC20Burnable("Fermion", "EXOFI")
+	{
+		_mint(owner(), (_MAX_SUPPLY * 4) / 10); // 40%
+	}
 
 	/// @notice Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
 	function mint(address to, uint256 amount) override public onlyOwner
 	{
+		require(totalSupply() < _MAX_SUPPLY, "Fermion: Max supply reached");
 		_mint(to, amount);
 	}
 }

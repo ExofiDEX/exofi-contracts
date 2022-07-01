@@ -231,7 +231,6 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 
 		uint256 fermionReward = _getFermionReward(_getMultiplier(pool.lastRewardBlock, block.number), pool.allocPoint);
 		pool.accFermionPerShare = _getAccFermionPerShare(pool.accFermionPerShare, fermionReward, lpSupply);
-		_fermion.mint(_developer, _unsafeDiv(fermionReward, 10));
 		_fermion.mint(address(this), fermionReward);
 		pool.lastRewardBlock = block.number;
 	}

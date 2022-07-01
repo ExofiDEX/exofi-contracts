@@ -29,7 +29,7 @@
 		"prepare": "husky install",
 		"test": "hardhat test",
 		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=2048\" hardhat coverage",
-		"test:gas": "cross-env REPORT_GAS=true yarn test",
+		"test:gas": "cross-env REPORT_GAS=true npm run test",
 		"deploy:goerli": "hardhat --network goerli deploy",
 		"verify:goerli": "hardhat --network goerli etherscan-verify --solc-input",
 		"export:goerli": "hardhat --network goerli export --export exports/goerli.json"

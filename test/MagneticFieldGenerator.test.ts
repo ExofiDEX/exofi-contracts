@@ -327,6 +327,8 @@ describe("MagneticFieldGenerator", () =>
 			// Needs to be done inside context too so that tests are isolated.
 			Fermion = (await FermionFactory.deploy()) as IFermion;
 			await Fermion.deployed();
+			const preMine: BigNumber = BigNumber.from(400000000).mul(BigNumber.from(10).pow(18));
+			await Fermion.burn(preMine);
 
 			lpToken = await ERC20MockFactory.deploy("LPToken", "LP", "10000000000") as IERC20;
 			await lpToken.deployed();

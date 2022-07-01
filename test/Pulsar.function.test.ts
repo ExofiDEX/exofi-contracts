@@ -11,7 +11,7 @@ import { IERC20Burnable, IPulsar } from "../typechain-types";
 describe("Pulsar Function Test @skip-on-coverage", () =>
 {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if ((config as any).gasReporter.enabled === true) return;
+	// if ((config as any).gasReporter.enabled === true) return;
 
 	let TokenFactory: ContractFactory;
 	let PulsarFactory: ContractFactory;
