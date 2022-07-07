@@ -12,29 +12,10 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 {
 	using SafeERC20 for IERC20;
 	
-	// Info of each user.
-	struct UserInfo
-	{
-		uint256 amount; // How many LP tokens the user has provided.
-		uint256 rewardDebt; // Reward debt. See explanation below.
-		//
-		// We do some fancy math here. Basically, any point in time, the amount of FMNs
-		// entitled to a user but is pending to be distributed is:
-		//
-		//   pending reward = (user.amount * pool.accFermionPerShare) - user.rewardDebt
-		//
-		// Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-		//   1. The pool's `accFermionPerShare` (and `lastRewardBlock`) gets updated.
-		//   2. User receives the pending reward sent to his/her address.
-		//   3. User's `amount` gets updated.
-		//   4. User's `rewardDebt` gets updated.
-	}
-
 	// Dev address.
 	address private _developer;
 	// FMN tokens created per block.
-	uint256 private _fermionPerBlock;
-
+	uint256 private immutable _fermionPerBlock;
 	// The FMN TOKEN!
 	IFermion private immutable _fermion;
 	// The block number when FMN mining starts.
@@ -47,8 +28,12 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
 	IMigratorDevice private _migrator;
 
+	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
+	IMagneticFieldGenerator private _successor;
+
 	// Info of each user that stakes LP tokens.
-	mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+	mapping(uint256 => mapping(address => UserInfo)) private _userInfo;
+	
 	// Total allocation points. Must be the sum of all allocation points in all pools.
 	uint256 private _totalAllocPoint; // Initializes with 0
 
@@ -94,7 +79,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	function deposit(uint256 pid, uint256 amount) public override
 	{
 		PoolInfo storage pool = _poolInfo[pid];
-		UserInfo storage user = userInfo[pid][msg.sender];
+		UserInfo storage user = _userInfo[pid][_msgSender()];
 
 		updatePool(pid);
 
@@ -105,7 +90,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 			// _unsafeDiv((user.amount * pool.accFermionPerShare), _ACC_FERMION_PRECISSION) can only be >= user.rewardDebt
 			uint256 pending = _unsafeSub(_unsafeDiv((userAmount * pool.accFermionPerShare), _ACC_FERMION_PRECISSION), user.rewardDebt);
 
-			// THOUGHTS on _safeFermionTransfer(msg.sender, pending);
+			// THOUGHTS on _safeFermionTransfer(_msgSender(), pending);
 			// The intend was that if there is a rounding error and MFG does therefore not hold enouth Fermion,
 			// the available amount of Fermion will be used.
 			// However since all variables are uint rounding errors can only appear in the form of cut of decimals.
@@ -113,17 +98,17 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 			// What will happen is that through the constant cut of deciamls a small part the amount of Fermions
 			// hold by the MFG can not be claimed by the pools because that amount was lost during the calculation.
 			// TODO: This can be addressed by a later version if necesarry. One option would be to burn the non claimable amount at a regular basis.
-			_fermion.transfer(msg.sender, pending);
+			_fermion.transfer(_msgSender(), pending);
 		}
 
-		pool.lpToken.safeTransferFrom(address(msg.sender), address(this), amount);
+		pool.lpToken.safeTransferFrom(address(_msgSender()), address(this), amount);
 		
 		userAmount = userAmount + amount;
 		user.amount = userAmount;
 		// This are the rewards the user would have till now since the pool creation.
 		// This is a cheap way to get the reward for the user starting at a given time.
 		user.rewardDebt = ((userAmount * pool.accFermionPerShare) / _ACC_FERMION_PRECISSION);
-		emit Deposit(msg.sender, pid, amount);
+		emit Deposit(_msgSender(), pid, amount);
 	}
 
 	// Update the given pool's FMN allocation point to 0. Can only be called by the owner.
@@ -139,13 +124,24 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	function emergencyWithdraw(uint256 pid) public override
 	{
 		PoolInfo storage pool = _poolInfo[pid];
-		UserInfo storage user = userInfo[pid][msg.sender];
+		UserInfo storage user = _userInfo[pid][_msgSender()];
 
 		uint256 userAmount = user.amount;
-		pool.lpToken.safeTransfer(address(msg.sender), userAmount);
-		emit EmergencyWithdraw(msg.sender, pid, userAmount);
+		pool.lpToken.safeTransfer(address(_msgSender()), userAmount);
+		emit EmergencyWithdraw(_msgSender(), pid, userAmount);
 		user.amount = 0;
 		user.rewardDebt = 0;
+	}
+
+	function handOverToSuccessor(IMagneticFieldGenerator suc) override public onlyOwner
+	{
+		require(address(_successor) == address(0), "MFG: Successor already set");
+		require(suc.owner() == address(this), "MFG: Successor not owned by this");
+		_successor = suc;
+		_fermion.transferOwnership(address(suc));
+		_fermion.transfer(address(suc), _fermion.balanceOf(address(this)));
+		_handOverPools();
+		suc.transferOwnership(owner());
 	}
 
 	// Update reward vairables for all pools. Be careful of gas spending!
@@ -243,7 +239,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		//HINT: including the rewards up to the the last sucessful pool reward update.
 
 		PoolInfo storage pool = _poolInfo[pid];
-		UserInfo storage user = userInfo[pid][msg.sender];
+		UserInfo storage user = _userInfo[pid][_msgSender()];
 		
 		uint256 userAmount = user.amount;
 		require(userAmount >= amount, "MFG: amount exeeds stored amount");
@@ -254,7 +250,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// user.rewardDept can not be greater than _unsafeDiv((userAmount * pool.accFermionPerShare), _ACC_FERMION_PRECISSION)
 		// Division of uint can not overflow.
 		uint256 pending = _unsafeSub(_unsafeDiv((userAmount * accFermionPerShare), _ACC_FERMION_PRECISSION), user.rewardDebt);
-		// THOUGHTS on _safeFermionTransfer(msg.sender, pending);
+		// THOUGHTS on _safeFermionTransfer(_msgSender(), pending);
 		// The intend was that if there is a rounding error and MFG does therefore not hold enouth Fermion,
 		// the available amount of Fermion will be used.
 		// However since all variables are uint rounding errors can only appear in the form of cut of decimals.
@@ -262,15 +258,15 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// What will happen is that through the constant cut of deciamls a small part the amount of Fermions
 		// hold by the MFG can not be claimed by the pools because that amount was lost during the calculation.
 		// TODO: This can be addressed by a later version if necesarry. One option would be to burn the non claimable amount at a regular basis.
-		_fermion.transfer(msg.sender, pending);
+		_fermion.transfer(_msgSender(), pending);
 
 		// Can not overflow. Checked with require.
 		userAmount = _unsafeSub(userAmount, amount);
 		user.amount = userAmount;
 		// Division of uint can not overflow.
 		user.rewardDebt = _unsafeDiv(userAmount * accFermionPerShare, _ACC_FERMION_PRECISSION);
-		pool.lpToken.safeTransfer(address(msg.sender), amount);
-		emit Withdraw(msg.sender, pid, amount);
+		pool.lpToken.safeTransfer(address(_msgSender()), amount);
+		emit Withdraw(_msgSender(), pid, amount);
 	}
 
 	function developer() public override view returns (address)
@@ -309,7 +305,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	function pendingFermion(uint256 pid, address user) public view override returns (uint256)
 	{
 		PoolInfo storage pool = _poolInfo[pid];
-		UserInfo storage singleUserInfo = userInfo[pid][user];
+		UserInfo storage singleUserInfo = _userInfo[pid][user];
 		uint256 accFermionPerShare = pool.accFermionPerShare;
 		uint256 lpSupply = pool.lpToken.balanceOf(address(this));
 		if (block.number > pool.lastRewardBlock && lpSupply != 0)
@@ -332,9 +328,45 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		return _poolInfo.length;
 	}
 
+	/// @notice Returns the address of the sucessor.
+	function successor() override public view returns (IMagneticFieldGenerator)
+	{
+		return _successor;
+	}
+
 	function totalAllocPoint() override public view returns (uint256)
 	{
 		return _totalAllocPoint;
+	}
+
+	function userInfo(uint256 pid, address user) override public view returns (UserInfo memory)
+	{
+		return _userInfo[pid][user];
+	}
+
+	function _handOverPools() private
+	{
+		// Overflow of pid not possible and need not to be checked.
+		unchecked
+		{
+			uint256 length = _poolInfo.length;
+			for (uint256 pid = 0; pid < length; ++pid)
+			{
+				_handOverSinglePool(pid);
+			}
+		}
+	}
+
+	function _handOverSinglePool(uint256 pid) private
+	{
+		updatePool(pid);
+		PoolInfo storage pool = _poolInfo[pid];
+		
+		if(pool.allocPoint > 0)
+		{
+			_successor.add(pool.allocPoint , pool.lpToken);
+			disablePool(pid);
+		}
 	}
 
 	/**

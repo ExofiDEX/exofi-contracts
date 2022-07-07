@@ -16,6 +16,24 @@ interface IMagneticFieldGenerator
 		uint256 accFermionPerShare; // Accumulated FMNs per share, times _ACC_FERMION_PRECISSION. See below.
 	}
 
+	// Info of each user.
+	struct UserInfo
+	{
+		uint256 amount; // How many LP tokens the user has provided.
+		uint256 rewardDebt; // Reward debt. See explanation below.
+		//
+		// We do some fancy math here. Basically, any point in time, the amount of FMNs
+		// entitled to a user but is pending to be distributed is:
+		//
+		//   pending reward = (user.amount * pool.accFermionPerShare) - user.rewardDebt
+		//
+		// Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
+		//   1. The pool's `accFermionPerShare` (and `lastRewardBlock`) gets updated.
+		//   2. User receives the pending reward sent to his/her address.
+		//   3. User's `amount` gets updated.
+		//   4. User's `rewardDebt` gets updated.
+	}
+
 	event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
 	event DevelopmentTransferred(address indexed previousDeveloper, address indexed newDeveloper);
 	event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -25,6 +43,7 @@ interface IMagneticFieldGenerator
 	function deposit(uint256 pid, uint256 amount) external;
 	function disablePool(uint256 pid) external;
 	function emergencyWithdraw(uint256 pid) external;
+	function handOverToSuccessor(IMagneticFieldGenerator successor) external;
 	function massUpdatePools() external;
 	function migrate(uint256 pid) external;
 	function renounceOwnership() external;
@@ -44,5 +63,7 @@ interface IMagneticFieldGenerator
 	function pendingFermion(uint256 pid, address user) external view returns (uint256);
 	function poolInfo(uint256 pid) external view returns (PoolInfo memory);
 	function poolLength() external view returns (uint256);
+	function successor() external view returns (IMagneticFieldGenerator);
 	function totalAllocPoint() external view returns (uint256);
+	function userInfo(uint256 pid, address user) external view returns (UserInfo memory);
 }

@@ -66,15 +66,15 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
-			await Pulsar().addBenefitary(Elise.address);
-			await Pulsar().addBenefitary(Fabian.address);
-			await Pulsar().addBenefitary(Gabi.address);
-			await Pulsar().addBenefitary(Hank.address);
-			await Pulsar().addBenefitary(Ines.address);
-			await Pulsar().addBenefitary(Jan.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
+			await Pulsar().addBeneficiary(Elise.address);
+			await Pulsar().addBeneficiary(Fabian.address);
+			await Pulsar().addBeneficiary(Gabi.address);
+			await Pulsar().addBeneficiary(Hank.address);
+			await Pulsar().addBeneficiary(Ines.address);
+			await Pulsar().addBeneficiary(Jan.address);
 			await StopAutomine();
 
 			let blockcount = 0;

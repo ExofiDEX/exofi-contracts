@@ -78,7 +78,7 @@ contract Pulsar is IPulsar, Ownable
 	}
 
 	/// @notice Adds a benefitary as long as the startBlock is not reached.
-	function addBenefitary(address benefitary) override public onlyOwner
+	function addBeneficiary(address benefitary) override public onlyOwner
 	{
 		require(block.number < _startBlockPhase1, "Pulsar: Can only added before start block"); // solhint-disable-line reason-string
 		_lastClaimedBlock[benefitary] = _startBlockPhase1;

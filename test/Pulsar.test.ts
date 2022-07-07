@@ -113,30 +113,30 @@ describe("Pulsar", () =>
 			await expect(result).to.revertedWith("Ownable: caller is not the owner");
 		});
 
-		it("Pulsar.addBenefitary: Should not allow non-owner to add benefitary", async () =>
+		it("Pulsar.addBeneficiary: Should not allow non-owner to add benefitary", async () =>
 		{
 			// Arrange
 			// Act
-			const result = Pulsar().connect(Bob).addBenefitary(Bob.address);
+			const result = Pulsar().connect(Bob).addBeneficiary(Bob.address);
 			// Assert
 			await expect(result).to.revertedWith("Ownable: caller is not the owner");
 		});
 
-		it("Pulsar.addBenefitary: Should allow owner to add benefitary", async () =>
+		it("Pulsar.addBeneficiary: Should allow owner to add benefitary", async () =>
 		{
 			// Arrange
 			// Act
-			await Pulsar().addBenefitary(Bob.address);
+			await Pulsar().addBeneficiary(Bob.address);
 			// Assert
 			// No error means all good.
 		});
 
-		it("Pulsar.addBenefitary: Should allow owner to add benefitary after start", async () =>
+		it("Pulsar.addBeneficiary: Should allow owner to add benefitary after start", async () =>
 		{
 			// Arrange
 			await AdvanceBlockTo(startBlockNumber + 1000);
 			// Act
-			const result = Pulsar().addBenefitary(Bob.address);
+			const result = Pulsar().addBeneficiary(Bob.address);
 			// Assert
 			await expect(result).to.revertedWith("Pulsar: Can only added before start block");
 		});
@@ -146,9 +146,10 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
+			await AdvanceBlockTo(startBlockNumber + 1000);
 			// Act
 			const holdings = await Pulsar().getClaimableAmount();
 			// Assert
@@ -160,9 +161,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			// Act
 			const holdings = await Pulsar().connect(Bob).getClaimableAmount();
 			// Assert
@@ -174,9 +175,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 12000);
 			// Act
 			const holdings = await Pulsar().connect(Bob).getClaimableAmount();
@@ -189,9 +190,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 12000 + 1);
 			// Act
 			const holdings = await Pulsar().connect(Bob).getClaimableAmount();
@@ -204,9 +205,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			// Act
 			// Start
 			await AdvanceBlockTo(startBlockNumber + 1000);
@@ -275,9 +276,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 12000 - 1);
 			// Act
 			const result = Pulsar().connect(Bob).die(); // Block +12000
@@ -290,9 +291,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 12000);
 			// Act
 			await Pulsar().connect(Bob).die(); // Block + 12001
@@ -311,9 +312,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 11999);
 			// Act
 			await Pulsar().connect(Bob).claim();
@@ -327,9 +328,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 1000);
 			// Act
 			await Pulsar().connect(Bob).claim();
@@ -357,9 +358,9 @@ describe("Pulsar", () =>
 			// Arrange
 			await Token.approve(Pulsar().address, 1000000);
 			await Pulsar().loadToken(1000000);
-			await Pulsar().addBenefitary(Bob.address);
-			await Pulsar().addBenefitary(Carol.address);
-			await Pulsar().addBenefitary(Dave.address);
+			await Pulsar().addBeneficiary(Bob.address);
+			await Pulsar().addBeneficiary(Carol.address);
+			await Pulsar().addBeneficiary(Dave.address);
 			await AdvanceBlockTo(startBlockNumber + 11999);
 			// Act
 			const result = Pulsar().connect(Alice).claim();

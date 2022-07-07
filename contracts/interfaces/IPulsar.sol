@@ -8,7 +8,7 @@ interface IPulsar is IOwnable
 {
 	function loadToken(uint256 amount) external;
 	function die() external;
-	function addBenefitary(address benefitary) external;
+	function addBeneficiary(address benefitary) external;
 	function claim() external;
 	function getClaimableAmount() external view returns(uint256);
 }
