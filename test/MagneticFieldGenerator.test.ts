@@ -4,8 +4,9 @@ import { expect } from "chai";
 import { BigNumber, Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ADDRESS_ZERO, AdvanceBlockTo, GetBlockNumber, PANIC_CODES } from "./helpers";
+import { ADDRESS_ZERO, AdvanceBlock, AdvanceBlockTo, GetBlockNumber, PANIC_CODES, StopAutomine } from "./helpers";
 import { IERC20, IFermion, IMagneticFieldGenerator } from "../typechain-types";
+import { Console } from "console";
 
 describe("MagneticFieldGenerator", () =>
 {
@@ -16,7 +17,6 @@ describe("MagneticFieldGenerator", () =>
 	let Alice: SignerWithAddress;
 	let Bob: SignerWithAddress;
 	let Carol: SignerWithAddress;
-	let Dev: SignerWithAddress;
 	let Minter: SignerWithAddress;
 	let Contract: Contract;
 	const MagneticFieldGenerator = () => Contract as IMagneticFieldGenerator;
@@ -27,8 +27,7 @@ describe("MagneticFieldGenerator", () =>
 		Alice = Signers[0];
 		Bob = Signers[1];
 		Carol = Signers[2];
-		Dev = Signers[3];
-		Minter = Signers[4];
+		Minter = Signers[3];
 
 		MagneticFieldGeneratorFactory = await ethers.getContractFactory("MagneticFieldGenerator");
 		FermionFactory = await ethers.getContractFactory("Fermion");
@@ -44,7 +43,7 @@ describe("MagneticFieldGenerator", () =>
 			Fermion = (await FermionFactory.deploy()) as IFermion;
 			await Fermion.deployed();
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "100", "0");
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "100", "0");
 			await Contract.deployed();
 
 			await Fermion.transferOwnership(Contract.address);
@@ -53,14 +52,12 @@ describe("MagneticFieldGenerator", () =>
 		it("MagneticFieldGenerator.constructor: Should set correct state variables", async () =>
 		{
 			const fermionAddress = await MagneticFieldGenerator().getFermionContract();
-			const devaddr = await MagneticFieldGenerator().developer();
 			const fermionPerBlock = await MagneticFieldGenerator().getFermionPerBlock();
 			const startBlock = await MagneticFieldGenerator().getStartBlock();
 			const owner = await Fermion.owner();
 			const migrator = await MagneticFieldGenerator().migrator();
 
 			expect(fermionAddress).to.equal(Fermion.address);
-			expect(devaddr).to.equal(Dev.address);
 			expect(fermionPerBlock).to.equal(100);
 			expect(startBlock).to.equal(0);
 			expect(owner).to.equal(MagneticFieldGenerator().address);
@@ -158,45 +155,6 @@ describe("MagneticFieldGenerator", () =>
 			// This error is thrown due the fact that the FakeERC20 token we use does not implement approve.
 			await expect(result).to.revertedWith("function selector was not recognized and there's no fallback function");
 		});
-
-		it("MagneticFieldGenerator.transferDevelopment: Should only allow developer to transfer devlopment", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await expect(MagneticFieldGenerator().connect(Bob).transferDevelopment(Bob.address))
-				.to.be.revertedWith("MFG: caller is not developer");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await MagneticFieldGenerator().connect(Dev).transferDevelopment(Bob.address);
-			expect(await MagneticFieldGenerator().developer()).to.equal(Bob.address);
-
-			await expect(MagneticFieldGenerator().connect(Dev).transferDevelopment(Alice.address))
-				.to.be.revertedWith("MFG: caller is not developer");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Bob.address);
-
-			await MagneticFieldGenerator().connect(Bob).transferDevelopment(Alice.address);
-			expect(await MagneticFieldGenerator().developer()).to.equal(Alice.address);
-		});
-
-		it("Should not allow developer to transfer devlopment to zero address", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await expect(MagneticFieldGenerator().connect(Dev).transferDevelopment(ADDRESS_ZERO))
-				.to.be.revertedWith("MFG: new developer is address(0)");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-		});
-
-		it("Should emit event 'DevelopmentTransferred' on delegate", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			const result = await MagneticFieldGenerator().connect(Dev).transferDevelopment(Bob.address);
-
-			await expect(result)
-				.to.emit(Contract, "DevelopmentTransferred")
-				.withArgs(Dev.address, Bob.address);
-		});
 	});
 
 	context("Contract ERC20-Ownable", async () =>
@@ -208,7 +166,7 @@ describe("MagneticFieldGenerator", () =>
 			Fermion = (await FermionFactory.deploy()) as IFermion;
 			await Fermion.deployed();
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", "0");
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", "0");
 			await Contract.deployed();
 
 			await Fermion.transferOwnership(Contract.address);
@@ -255,7 +213,7 @@ describe("MagneticFieldGenerator", () =>
 			Fermion = (await FermionFactory.deploy()) as IFermion;
 			await Fermion.deployed();
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "100", "0");
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "100", "0");
 			await Contract.deployed();
 
 			await Fermion.transferOwnership(Contract.address);
@@ -264,54 +222,14 @@ describe("MagneticFieldGenerator", () =>
 		it("Should set correct state variables", async () =>
 		{
 			const fermionAddress = await MagneticFieldGenerator().getFermionContract();
-			const devaddr = await MagneticFieldGenerator().developer();
 			const fermionPerBlock = await MagneticFieldGenerator().getFermionPerBlock();
 			const startBlock = await MagneticFieldGenerator().getStartBlock();
 			const owner = await Fermion.owner();
 
 			expect(fermionAddress).to.equal(Fermion.address);
-			expect(devaddr).to.equal(Dev.address);
 			expect(fermionPerBlock).to.equal(100);
 			expect(startBlock).to.equal(0);
 			expect(owner).to.equal(MagneticFieldGenerator().address);
-		});
-		it("Should only allow developer to transfer devlopment", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await expect(MagneticFieldGenerator().connect(Bob).transferDevelopment(Bob.address))
-				.to.be.revertedWith("MFG: caller is not developer");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await MagneticFieldGenerator().connect(Dev).transferDevelopment(Bob.address);
-			expect(await MagneticFieldGenerator().developer()).to.equal(Bob.address);
-
-			await expect(MagneticFieldGenerator().connect(Dev).transferDevelopment(Alice.address))
-				.to.be.revertedWith("MFG: caller is not developer");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Bob.address);
-
-			await MagneticFieldGenerator().connect(Bob).transferDevelopment(Alice.address);
-			expect(await MagneticFieldGenerator().developer()).to.equal(Alice.address);
-		});
-
-		it("Should not allow developer to transfer devlopment to zero address", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			await expect(MagneticFieldGenerator().connect(Dev).transferDevelopment(ADDRESS_ZERO))
-				.to.be.revertedWith("MFG: new developer is address(0)");
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-		});
-
-		it("Should emit event 'DevelopmentTransferred' on delegate", async () =>
-		{
-			expect(await MagneticFieldGenerator().developer()).to.equal(Dev.address);
-
-			const result = await MagneticFieldGenerator().connect(Dev).transferDevelopment(Bob.address);
-
-			await expect(result)
-				.to.emit(Contract, "DevelopmentTransferred")
-				.withArgs(Dev.address, Bob.address);
 		});
 	});
 
@@ -353,7 +271,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
@@ -361,7 +279,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(200, lpToken2.address);
 			await MagneticFieldGenerator().add(300, lpToken3.address);
 
-			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
+			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
 			await NewContract.deployed();
 			await NewContract.transferOwnership(Contract.address);
 			await MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
@@ -383,7 +301,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
@@ -392,7 +310,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(300, lpToken3.address);
 			await MagneticFieldGenerator().disablePool(1); // lpToken2 pool
 
-			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
+			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
 			await NewContract.deployed();
 			await NewContract.transferOwnership(Contract.address);
 			await MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
@@ -413,7 +331,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
@@ -421,12 +339,12 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(200, lpToken2.address);
 			await MagneticFieldGenerator().add(300, lpToken3.address);
 
-			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
+			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
 			await NewContract.deployed();
 			await NewContract.transferOwnership(Contract.address);
 			await MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
 
-			const NewContract2 = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
+			const NewContract2 = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
 			await NewContract2.deployed();
 			await NewContract2.transferOwnership(Contract.address);
 			const result = MagneticFieldGenerator().handOverToSuccessor(NewContract2.address);
@@ -438,7 +356,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
@@ -446,7 +364,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(200, lpToken2.address);
 			await MagneticFieldGenerator().add(300, lpToken3.address);
 
-			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
+			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
 			await NewContract.deployed();
 			const result = MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
 
@@ -459,7 +377,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			const limit: BigNumber = BigNumber.from(2).pow(256).sub(2);
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
@@ -479,7 +397,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			const limit: BigNumber = BigNumber.from(2).pow(256).sub(2);
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
@@ -500,7 +418,7 @@ describe("MagneticFieldGenerator", () =>
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
 
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
@@ -531,7 +449,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 
 			await MagneticFieldGenerator().deployed();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
@@ -547,13 +465,13 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address);
 
 			const userInfo1 = await MagneticFieldGenerator().userInfo(0, Alice.address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, 1000);
-			await MagneticFieldGenerator().connect(Alice).deposit(0, 100);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, 100, Alice.address);
 			const userInfo2 = await MagneticFieldGenerator().userInfo(0, Alice.address);
 
 			expect(userInfo1.amount).to.equal(0);
@@ -569,13 +487,13 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 
 			// 1000 per block farming rate starting at block +100
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address);
 
 			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "100");
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "100", Bob.address);
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("900");
 
 			await MagneticFieldGenerator().connect(Bob).emergencyWithdraw(0);
@@ -587,36 +505,35 @@ describe("MagneticFieldGenerator", () =>
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 100;
 			// 1000 per block farming rate starting at block +100
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address);
 
 			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "100");
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "100", Bob.address);
 			await AdvanceBlockTo(baseBlock + 89);
 
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "0"); // block +90
+			await MagneticFieldGenerator().connect(Bob).harvest(0, Bob.address); // block +90
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("0");
 			await AdvanceBlockTo(baseBlock + 94);
 
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "0"); // block +95
+			await MagneticFieldGenerator().connect(Bob).harvest(0, Bob.address); // block +95
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("0");
 			await AdvanceBlockTo(baseBlock + 99);
 
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "0"); // block +100
+			await MagneticFieldGenerator().connect(Bob).harvest(0, Bob.address); // block +100
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("0");
 			await AdvanceBlockTo(baseBlock + 100);
 
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "0"); // block +101
+			await MagneticFieldGenerator().connect(Bob).harvest(0, Bob.address); // block +101
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("1000");
 
 			await AdvanceBlockTo(baseBlock + 104);
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "0"); // block +105
+			await MagneticFieldGenerator().connect(Bob).harvest(0, Bob.address); // block +105
 
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("5000");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
 			expect(await Fermion.totalSupply()).to.equal("5000");
 		});
 
@@ -624,14 +541,14 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address);
 			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "100");
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "100", Bob.address);
 
-			const result = MagneticFieldGenerator().connect(Bob).withdraw(0, "101");
+			const result = MagneticFieldGenerator().connect(Bob).withdraw(0, "101", Bob.address);
 
 			await expect(result).to.revertedWith("MFG: amount exeeds stored amount");
 		});
@@ -642,7 +559,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 200;
 
 			// 1000 per block farming rate starting at block +200
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 
@@ -653,16 +570,14 @@ describe("MagneticFieldGenerator", () =>
 			await AdvanceBlockTo(baseBlock + 204);
 			expect(await Fermion.totalSupply()).to.equal("0");
 			await AdvanceBlockTo(baseBlock + 209);
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "10"); // block +210
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "10", Bob.address); // block +210
 			expect(await Fermion.totalSupply()).to.equal("0");
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("0");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("990");
 			await AdvanceBlockTo(baseBlock + 219);
-			await MagneticFieldGenerator().connect(Bob).withdraw(0, "10"); // block +220
+			await MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "10", Bob.address); // block +220
 			expect(await Fermion.totalSupply()).to.equal("10000");
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("10000");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("1000");
 		});
 
@@ -671,7 +586,7 @@ describe("MagneticFieldGenerator", () =>
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 300;
 			// 1000 per block farming rate starting at block +300
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address);
@@ -681,55 +596,69 @@ describe("MagneticFieldGenerator", () =>
 
 			// Alice deposits 10 LPs at block +310
 			await AdvanceBlockTo(baseBlock + 309);
-			await MagneticFieldGenerator().connect(Alice).deposit(0, "10");
+			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
 			// Bob deposits 20 LPs at block +314
 			await AdvanceBlockTo(baseBlock + 313);
-			await MagneticFieldGenerator().connect(Bob).deposit(0, "20");
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "20", Bob.address);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("4000");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
 			// Carol deposits 30 LPs at block +318
+			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			await AdvanceBlockTo(baseBlock + 317);
-			await MagneticFieldGenerator().connect(Carol).deposit(0, "30");
+			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
+			await MagneticFieldGenerator().connect(Carol).deposit(0, "30", Carol.address);
+			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5333");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("2666");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
 			// Alice deposits 10 more LPs at block +320. At this point:
-			//   Alice should have: 4*1000 + 4*1/3*1000 + 2*1/6*1000 = 5666
-			//   MasterChef should have the remaining: 10000 - 5666 = 4334
 			await AdvanceBlockTo(baseBlock + 319);
-			await MagneticFieldGenerator().connect(Alice).deposit(0, "10");
+			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
+			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5667");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("3333");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("1000");
 			expect(await Fermion.totalSupply()).to.equal("10000");
-			expect(await Fermion.balanceOf(Alice.address)).to.equal("5666");
-			expect(await Fermion.balanceOf(Bob.address)).to.equal("0");
-			expect(await Fermion.balanceOf(Carol.address)).to.equal("0");
-			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("4334");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
-			// Bob withdraws 5 LPs at block +330. At this point:
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("10000");
+			// Bob withdraws and harvests 5 LPs at block +330. At this point:
 			//   Bob should have: 4*2/3*1000 + 2*2/6*1000 + 10*2/7*1000 = 6190
 			await AdvanceBlockTo(baseBlock + 329);
-			await MagneticFieldGenerator().connect(Bob).withdraw(0, "5", { from: Bob.address });
-			expect(await Fermion.totalSupply()).to.equal("20000");
-			expect(await Fermion.balanceOf(Alice.address)).to.equal("5666");
-			expect(await Fermion.balanceOf(Bob.address)).to.equal("6190");
-			expect(await Fermion.balanceOf(Carol.address)).to.equal("0");
-			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("8144");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
+			await MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "5", Bob.address);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(8524);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal(5286);
+			expect(await Fermion.totalSupply()).to.equal(20000);
+			expect(await Fermion.balanceOf(Alice.address)).to.equal(0);
+			expect(await Fermion.balanceOf(Bob.address)).to.equal(6190);
+			expect(await Fermion.balanceOf(Carol.address)).to.equal(0);
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal(13810);
 			// Alice withdraws 20 LPs at block +340.
 			// Bob withdraws 15 LPs at block +350.
 			// Carol withdraws 30 LPs at block +360.
 			await AdvanceBlockTo(baseBlock + 339);
-			await MagneticFieldGenerator().connect(Alice).withdraw(0, "20");
+			await MagneticFieldGenerator().connect(Alice).withdrawAndHarvest(0, "20", Alice.address);
 			await AdvanceBlockTo(baseBlock + 349);
-			await MagneticFieldGenerator().connect(Bob).withdraw(0, "15");
+			await MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "15", Bob.address);
 			await AdvanceBlockTo(baseBlock + 359);
-			await MagneticFieldGenerator().connect(Carol).withdraw(0, "30");
+			await MagneticFieldGenerator().connect(Carol).withdrawAndHarvest(0, "30", Carol.address);
 			expect(await Fermion.totalSupply()).to.equal("50000");
-			expect(await Fermion.balanceOf(Dev.address)).to.equal("0");
-			// Alice should have: 5666 + 10*2/7*1000 + 10*2/6.5*1000 = 11600
-			expect(await Fermion.balanceOf(Alice.address)).to.equal("11600");
+			// Alice should have: 5667 + 10*2/7*1000 + 10*2/6.5*1000 = 11601
+			expect(await Fermion.balanceOf(Alice.address)).to.equal("11601");
 			// Bob should have: 6190 + 10*1.5/6.5 * 1000 + 10*1.5/4.5*1000 = 11831
 			expect(await Fermion.balanceOf(Bob.address)).to.equal("11831");
 			// Carol should have: 2*3/6*1000 + 10*3/7*1000 + 10*3/6.5*1000 + 10*3/4.5*1000 + 10*1000 = 26568
 			expect(await Fermion.balanceOf(Carol.address)).to.equal("26568");
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("0");
 			// All of them should have 1000 LPs back.
 			expect(await lpToken.balanceOf(Alice.address)).to.equal("1000");
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("1000");
 			expect(await lpToken.balanceOf(Carol.address)).to.equal("1000");
+			// No more pending Fermions
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal(0);
 		});
 
 		it("Should give proper FMNs allocation to each pool", async () =>
@@ -737,7 +666,7 @@ describe("MagneticFieldGenerator", () =>
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 400;
 			// 1000 per block farming rate starting at block +400
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
@@ -746,7 +675,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(10, lpToken.address);
 			// Alice deposits 10 LPs at block +410
 			await AdvanceBlockTo(baseBlock + 409);
-			await MagneticFieldGenerator().connect(Alice).deposit(0, "10");
+			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
 			// Add LP2 to the pool with allocation 2 at block +420
 			await AdvanceBlockTo(baseBlock + 419);
 			await MagneticFieldGenerator().add(20, lpToken2.address);
@@ -754,7 +683,7 @@ describe("MagneticFieldGenerator", () =>
 			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("10000");
 			// Bob deposits 10 LP2s at block +425
 			await AdvanceBlockTo(baseBlock + 424);
-			await MagneticFieldGenerator().connect(Bob).deposit(1, "5");
+			await MagneticFieldGenerator().connect(Bob).deposit(1, "5", Bob.address);
 			// Alice should have 10000 + 5*1/3*1000 = 11666 pending reward
 			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("11666");
 			await AdvanceBlockTo(baseBlock + 430);
@@ -767,7 +696,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 400;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
@@ -784,7 +713,7 @@ describe("MagneticFieldGenerator", () =>
 		{
 			const baseBlock = await GetBlockNumber();
 			const startBlock = baseBlock + 400;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, Dev.address, "1000", BigNumber.from(startBlock));
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
@@ -794,5 +723,8 @@ describe("MagneticFieldGenerator", () =>
 
 			await expect(result).to.revertedWith("Ownable: caller is not the owner");
 		});
+
+		// TODO: Test if withdrawAndHarvest is equal withdraw + harvest.
+		// TODO: Test withdraw and harvetst at different times
 	});
 });

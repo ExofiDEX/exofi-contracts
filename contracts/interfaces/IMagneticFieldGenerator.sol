@@ -20,7 +20,7 @@ interface IMagneticFieldGenerator
 	struct UserInfo
 	{
 		uint256 amount; // How many LP tokens the user has provided.
-		uint256 rewardDebt; // Reward debt. See explanation below.
+		int256 rewardDebt; // Reward debt. See explanation below.
 		//
 		// We do some fancy math here. Basically, any point in time, the amount of FMNs
 		// entitled to a user but is pending to be distributed is:
@@ -34,27 +34,28 @@ interface IMagneticFieldGenerator
 		//   4. User's `rewardDebt` gets updated.
 	}
 
-	event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
+	event Deposit(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 	event DevelopmentTransferred(address indexed previousDeveloper, address indexed newDeveloper);
+	event Harvest(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 	event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
-	event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
+	event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 
 	function add(uint256 allocPoint, IERC20 lpToken) external;
-	function deposit(uint256 pid, uint256 amount) external;
+	function deposit(uint256 pid, uint256 amount, address to) external;
 	function disablePool(uint256 pid) external;
 	function emergencyWithdraw(uint256 pid) external;
 	function handOverToSuccessor(IMagneticFieldGenerator successor) external;
+	function harvest(uint256 pid, address to) external;
 	function massUpdatePools() external;
 	function migrate(uint256 pid) external;
 	function renounceOwnership() external;
 	function set(uint256 pid, uint256 allocPoint) external;
 	function setMigrator(IMigratorDevice migratorContract) external;
 	function transferOwnership(address newOwner) external;
-	function transferDevelopment(address newDevelopmentAddress) external;
-	function updatePool(uint256 pid) external;
-	function withdraw(uint256 pid, uint256 amount) external;
+	function updatePool(uint256 pid) external returns(PoolInfo memory);
+	function withdraw(uint256 pid, uint256 amount, address to) external;
+	function withdrawAndHarvest(uint256 pid, uint256 amount, address to) external;
 
-	function developer() external view returns (address);
 	function getFermionContract() external view returns (IFermion);
 	function getFermionPerBlock() external view returns (uint256);
 	function getStartBlock() external view returns (uint256);
