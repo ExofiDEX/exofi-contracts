@@ -6,7 +6,7 @@ import "./FakeERC20.sol";
 
 contract UniMigrator is IMigratorDevice
 {
-	address private _beneficiary;
+	address private immutable _beneficiary;
 
 	constructor(address beneficiaryAddress)
 	{

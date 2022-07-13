@@ -4,9 +4,8 @@ import { expect } from "chai";
 import { BigNumber, Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ADDRESS_ZERO, AdvanceBlock, AdvanceBlockTo, GetBlockNumber, PANIC_CODES, StopAutomine } from "./helpers";
+import { ADDRESS_ZERO, AdvanceBlock, AdvanceBlockTo, GetBlockNumber, PANIC_CODES, StartAutomine, StopAutomine } from "./helpers";
 import { IERC20, IFermion, IMagneticFieldGenerator } from "../typechain-types";
-import { Console } from "console";
 
 describe("MagneticFieldGenerator", () =>
 {
@@ -239,6 +238,11 @@ describe("MagneticFieldGenerator", () =>
 		let lpToken2: IERC20;
 		let lpToken3: IERC20;
 		let Fermion: IFermion;
+
+		afterEach(async () =>
+		{
+			await StartAutomine();
+		});
 
 		beforeEach(async () =>
 		{
@@ -553,6 +557,22 @@ describe("MagneticFieldGenerator", () =>
 			await expect(result).to.revertedWith("MFG: amount exeeds stored amount");
 		});
 
+		it("Should not withdraw and harvest more that deposit", async () =>
+		{
+			const baseBlock = await GetBlockNumber();
+			const startBlock = baseBlock;
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
+			await MagneticFieldGenerator().deployed();
+			await Fermion.transferOwnership(MagneticFieldGenerator().address);
+			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address);
+			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "100", Bob.address);
+
+			const result = MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "101", Bob.address);
+
+			await expect(result).to.revertedWith("MFG: amount exeeds stored amount");
+		});
+
 		it("Should not distribute FMNs if no one deposit", async () =>
 		{
 			const baseBlock = await GetBlockNumber();
@@ -604,19 +624,14 @@ describe("MagneticFieldGenerator", () =>
 			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("0");
 			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
 			// Carol deposits 30 LPs at block +318
-			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			await AdvanceBlockTo(baseBlock + 317);
-			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			await MagneticFieldGenerator().connect(Carol).deposit(0, "30", Carol.address);
-			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5333");
 			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("2666");
 			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
 			// Alice deposits 10 more LPs at block +320. At this point:
 			await AdvanceBlockTo(baseBlock + 319);
-			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
-			console.debug(`Block: ${await GetBlockNumber()} Alice: ${await MagneticFieldGenerator().pendingFermion(0, Alice.address)}`);
 			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5667");
 			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("3333");
 			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("1000");
@@ -725,6 +740,187 @@ describe("MagneticFieldGenerator", () =>
 		});
 
 		// TODO: Test if withdrawAndHarvest is equal withdraw + harvest.
-		// TODO: Test withdraw and harvetst at different times
+		it("Should have same result with withdrawAndHarvest and withdraw + harvest", async () =>
+		{
+			const baseBlock = await GetBlockNumber();
+			const startBlock = baseBlock + 300;
+			// 2000 per block farming rate starting at block +300
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "2000", BigNumber.from(startBlock));
+			await MagneticFieldGenerator().deployed();
+			await Fermion.transferOwnership(MagneticFieldGenerator().address);
+			await MagneticFieldGenerator().add(100, lpToken.address);
+			await MagneticFieldGenerator().add(100, lpToken2.address);
+			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken.connect(Carol).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Carol).approve(MagneticFieldGenerator().address, "1000");
+			await StopAutomine();
+
+			// Alice deposits 10 LPs at block +310
+			await AdvanceBlockTo(baseBlock + 309);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
+			await MagneticFieldGenerator().connect(Alice).deposit(1, "10", Alice.address);
+			// Bob deposits 20 LPs at block +314
+			await AdvanceBlockTo(baseBlock + 313);
+			await MagneticFieldGenerator().connect(Bob).deposit(0, "20", Bob.address);
+			await MagneticFieldGenerator().connect(Bob).deposit(1, "20", Bob.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await AdvanceBlock();
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("4000");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
+			expect(await Fermion.balanceOf(Alice.address)).to.equal("4000");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Bob.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Carol.address)).to.equal("0");
+			// Carol deposits 30 LPs at block +318
+			await AdvanceBlockTo(baseBlock + 317);
+			await MagneticFieldGenerator().connect(Carol).deposit(0, "30", Carol.address);
+			await MagneticFieldGenerator().connect(Carol).deposit(1, "30", Carol.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await AdvanceBlock();
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5333");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("2666");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("0");
+			expect(await Fermion.balanceOf(Alice.address)).to.equal("5333");
+			expect(await Fermion.balanceOf(Bob.address)).to.equal("2666");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Bob.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Carol.address)).to.equal("0");
+			// Alice deposits 10 more LPs at block +320. At this point:
+			await AdvanceBlockTo(baseBlock + 319);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, "10", Alice.address);
+			await MagneticFieldGenerator().connect(Alice).deposit(1, "10", Alice.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await MagneticFieldGenerator().connect(Carol).harvest(1, Carol.address);
+			await AdvanceBlock();
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal("5667");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal("3333");
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal("1000");
+			expect(await Fermion.balanceOf(Alice.address)).to.equal("5667");
+			expect(await Fermion.balanceOf(Bob.address)).to.equal("3333");
+			expect(await Fermion.balanceOf(Carol.address)).to.equal("1000");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Bob.address)).to.equal("0");
+			expect(await MagneticFieldGenerator().pendingFermion(1, Carol.address)).to.equal("0");
+			expect(await Fermion.totalSupply()).to.equal("20000");
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("10000");
+			// Bob withdraws and harvests 5 LPs at block +330. At this point:
+			//   Bob should have: 4*2/3*1000 + 2*2/6*1000 + 10*2/7*1000 = 6190
+			await AdvanceBlockTo(baseBlock + 329);
+			await MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "5", Bob.address);
+			await MagneticFieldGenerator().connect(Bob).withdraw(1, "5", Bob.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await MagneticFieldGenerator().connect(Carol).harvest(1, Carol.address);
+			await AdvanceBlock();
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(8524);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal(5286);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Carol.address)).to.equal(0);
+			expect(await Fermion.totalSupply()).to.equal(40000);
+			expect(await Fermion.balanceOf(Alice.address)).to.equal(8524);
+			expect(await Fermion.balanceOf(Bob.address)).to.equal(12379);
+			expect(await Fermion.balanceOf(Carol.address)).to.equal(5286);
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal(13811);
+			// Alice withdraws 20 LPs at block +340.
+			// Bob withdraws 15 LPs at block +350.
+			// Carol withdraws 30 LPs at block +360.
+			await AdvanceBlockTo(baseBlock + 339);
+			await MagneticFieldGenerator().connect(Alice).withdrawAndHarvest(0, "20", Alice.address);
+			await MagneticFieldGenerator().connect(Alice).withdraw(1, "20", Alice.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await MagneticFieldGenerator().connect(Carol).harvest(1, Carol.address);
+			await AdvanceBlockTo(baseBlock + 349);
+			await MagneticFieldGenerator().connect(Bob).withdrawAndHarvest(0, "15", Bob.address);
+			await MagneticFieldGenerator().connect(Bob).withdraw(1, "15", Bob.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await MagneticFieldGenerator().connect(Carol).harvest(1, Carol.address);
+			await AdvanceBlockTo(baseBlock + 359);
+			await MagneticFieldGenerator().connect(Carol).withdrawAndHarvest(0, "30", Carol.address);
+			await MagneticFieldGenerator().connect(Carol).withdraw(1, "30", Carol.address);
+			await MagneticFieldGenerator().connect(Alice).harvest(1, Alice.address);
+			await MagneticFieldGenerator().connect(Bob).harvest(1, Bob.address);
+			await MagneticFieldGenerator().connect(Carol).harvest(1, Carol.address);
+			await AdvanceBlock();
+			await StartAutomine();
+			expect(await Fermion.totalSupply()).to.equal("100000");
+			// Alice should have: 5667 + 10*2/7*1000 + 10*2/6.5*1000 = 11601
+			expect(await Fermion.balanceOf(Alice.address)).to.equal("23202");
+			// Bob should have: 6190 + 10*1.5/6.5 * 1000 + 10*1.5/4.5*1000 = 11831
+			expect(await Fermion.balanceOf(Bob.address)).to.equal("23661");
+			// Carol should have: 2*3/6*1000 + 10*3/7*1000 + 10*3/6.5*1000 + 10*3/4.5*1000 + 10*1000 = 26568
+			expect(await Fermion.balanceOf(Carol.address)).to.equal("53136");
+			// 1 Token remains because auf cut of decimals in the calculation.
+			expect(await Fermion.balanceOf(MagneticFieldGenerator().address)).to.equal("1");
+			// All of them should have 1000 LPs back.
+			expect(await lpToken.balanceOf(Alice.address)).to.equal("1000");
+			expect(await lpToken.balanceOf(Bob.address)).to.equal("1000");
+			expect(await lpToken.balanceOf(Carol.address)).to.equal("1000");
+			expect(await lpToken2.balanceOf(Alice.address)).to.equal("1000");
+			expect(await lpToken2.balanceOf(Bob.address)).to.equal("1000");
+			expect(await lpToken2.balanceOf(Carol.address)).to.equal("1000");
+			// No more pending Fermions
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Carol.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Bob.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Carol.address)).to.equal(0);
+		});
+
+		it("Should have same result with withdrawAndHarvest and withdraw before harvest", async () =>
+		{
+			const baseBlock = await GetBlockNumber();
+			const startBlock = baseBlock + 300;
+			// 2000 per block farming rate starting at block +300
+			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "2000", BigNumber.from(startBlock));
+			await MagneticFieldGenerator().deployed();
+			await Fermion.transferOwnership(MagneticFieldGenerator().address);
+			await MagneticFieldGenerator().add(100, lpToken.address);
+			await MagneticFieldGenerator().add(100, lpToken2.address);
+			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken.connect(Carol).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
+			await lpToken2.connect(Carol).approve(MagneticFieldGenerator().address, "1000");
+			await StopAutomine();
+
+			// Alice deposits 10 LPs at block +310
+			await AdvanceBlockTo(baseBlock + 309);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, 10, Alice.address);
+			await MagneticFieldGenerator().connect(Alice).deposit(1, 10, Alice.address);
+			await AdvanceBlockTo(baseBlock + 314);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(4000);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal(4000);
+			expect(await Fermion.balanceOf(Alice.address)).to.equal(0);
+
+			await AdvanceBlockTo(baseBlock + 317);
+			await MagneticFieldGenerator().connect(Alice).withdrawAndHarvest(0, 10, Alice.address);
+			await MagneticFieldGenerator().connect(Alice).withdraw(1, 10, Alice.address);
+			await AdvanceBlock();
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(0);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal(8000);
+			expect(await Fermion.balanceOf(Alice.address)).to.equal(8000);
+
+			await AdvanceBlockTo(baseBlock + 319);
+			await MagneticFieldGenerator().connect(Alice).deposit(0, 10, Alice.address);
+			await MagneticFieldGenerator().connect(Alice).deposit(1, 10, Alice.address);
+
+			await AdvanceBlockTo(baseBlock + 324);
+			expect(await MagneticFieldGenerator().pendingFermion(0, Alice.address)).to.equal(4000);
+			expect(await MagneticFieldGenerator().pendingFermion(1, Alice.address)).to.equal(12000);
+			expect(await Fermion.balanceOf(Alice.address)).to.equal(8000);
+			await StartAutomine();
+		});
 	});
 });

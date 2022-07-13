@@ -5,7 +5,7 @@ module.exports = async function ({ getNamedAccounts, deployments })
 
 	await deploy("UniMigrator", {
 		from: deployer,
-		args: [dev.address],
+		args: [dev],
 		log: true,
 		deterministicDeployment: false
 	});

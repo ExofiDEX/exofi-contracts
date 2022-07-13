@@ -28,11 +28,17 @@
 		"publish": "ts-node scripts/SetupPackage.ts && npm publish ./package --access public",
 		"prepare": "husky install",
 		"test": "hardhat test",
-		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=2048\" hardhat coverage",
+		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" hardhat coverage",
 		"test:gas": "cross-env REPORT_GAS=true npm run test",
 		"deploy:goerli": "hardhat --network goerli deploy",
 		"verify:goerli": "hardhat --network goerli etherscan-verify --solc-input",
-		"export:goerli": "hardhat --network goerli export --export exports/goerli.json"
+		"export:goerli": "hardhat --network goerli export --export exports/goerli.json",
+		"deploy:ropsten": "hardhat --network ropsten deploy",
+		"verify:ropsten": "hardhat --network ropsten etherscan-verify --solc-input",
+		"export:ropsten": "hardhat --network ropsten export --export exports/ropsten.json",
+		"deploy:rinkeby": "hardhat --network rinkeby deploy",
+		"verify:rinkeby": "hardhat --network rinkeby etherscan-verify --solc-input",
+		"export:rinkeby": "hardhat --network rinkeby export --export exports/rinkeby.json"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^17.0.2",
