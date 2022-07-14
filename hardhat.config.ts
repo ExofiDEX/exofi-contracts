@@ -84,6 +84,10 @@ const config: HardhatUserConfig = {
 			url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
 			accounts
 		},
+		rinkeby: {
+			url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
+			accounts
+		},
 		goerli: {
 			url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
 			accounts
