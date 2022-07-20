@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './interfaces/IUniswapV2Factory.sol';
+import "./interfaces/IExofiswapFactory.sol";
 import './UniswapV2Pair.sol';
 
 contract ExofiswapFactory is IUniswapV2Factory {

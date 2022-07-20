@@ -10,9 +10,8 @@ contract ExofiswapERC20 is IExofiswapERC20, ERC20
 	bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 	mapping(address => uint256) private _nonces;
 
-	constructor(string memory tokenName) ERC20(tokenName, "ENERGY") {
-		
-	}
+	constructor(string memory tokenName) ERC20(tokenName, "ENERGY")
+	{ } // solhint-disable-line no-empty-blocks
 
 	// The standard ERC-20 race condition for approvals applies to permit as well.
 	function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) override public
@@ -64,5 +63,10 @@ contract ExofiswapERC20 is IExofiswapERC20, ERC20
 	function nonces(address owner) override public view returns (uint256)
 	{
 		return _nonces[owner];
+	}
+
+	function PERMIT_TYPEHASH() override public pure returns (bytes32) //solhint-disable-line func-name-mixedcase
+	{
+		return _PERMIT_TYPEHASH;
 	}
 }
