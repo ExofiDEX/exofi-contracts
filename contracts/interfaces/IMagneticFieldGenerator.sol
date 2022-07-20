@@ -35,15 +35,17 @@ interface IMagneticFieldGenerator
 	}
 
 	event Deposit(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
-	event DevelopmentTransferred(address indexed previousDeveloper, address indexed newDeveloper);
 	event Harvest(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
-	event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
+	event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
+	event LogPoolAddition(uint256 indexed pid, uint256 allocPoint, IERC20 indexed lpToken);
+	event LogSetPool(uint256 indexed pid, uint256 allocPoint);
+	event LogUpdatePool(uint256 indexed pid, uint256 lastRewardBlock, uint256 lpSupply, uint256 accFermionPerShare);
 	event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 
 	function add(uint256 allocPoint, IERC20 lpToken) external;
 	function deposit(uint256 pid, uint256 amount, address to) external;
 	function disablePool(uint256 pid) external;
-	function emergencyWithdraw(uint256 pid) external;
+	function emergencyWithdraw(uint256 pid, address to) external;
 	function handOverToSuccessor(IMagneticFieldGenerator successor) external;
 	function harvest(uint256 pid, address to) external;
 	function massUpdatePools() external;

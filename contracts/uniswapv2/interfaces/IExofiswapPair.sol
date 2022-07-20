@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: GPL-3.0
-
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IUniswapV2Pair {
-	event Approval(address indexed owner, address indexed spender, uint value);
-	event Transfer(address indexed from, address indexed to, uint value);
+import "./IExofiswapERC20.sol";
+
+interface IExofiswapPair is IExofiswapERC20
+{
 	event Mint(address indexed sender, uint amount0, uint amount1);
 	event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
 	event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address indexed to);

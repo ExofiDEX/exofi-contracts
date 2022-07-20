@@ -57,6 +57,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 				accFermionPerShare: 0
 			})
 		);
+		emit LogPoolAddition(_poolInfo.length - 1, allocPoint, lpToken);
 	}
 
 	// Deposit LP tokens to MagneticFieldGenerator for FMN allocation.
@@ -82,14 +83,14 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	}
 
 	// Withdraw without caring about rewards. EMERGENCY ONLY.
-	function emergencyWithdraw(uint256 pid) public override
+	function emergencyWithdraw(uint256 pid, address to) public override
 	{
 		PoolInfo storage pool = _poolInfo[pid];
 		UserInfo storage user = _userInfo[pid][_msgSender()];
 
 		uint256 userAmount = user.amount;
-		pool.lpToken.safeTransfer(address(_msgSender()), userAmount);
-		emit EmergencyWithdraw(_msgSender(), pid, userAmount);
+		pool.lpToken.safeTransfer(to, userAmount);
+		emit EmergencyWithdraw(_msgSender(), pid, userAmount, to);
 		user.amount = 0;
 		user.rewardDebt = 0;
 	}
@@ -147,6 +148,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// Underflow is impossible since _totalAllocPoint can not be lower that _poolInfo[pid].allocPoint.
 		_totalAllocPoint = _unsafeSub(_totalAllocPoint, _poolInfo[pid].allocPoint) + allocPoint;
 		_poolInfo[pid].allocPoint = allocPoint;
+		emit LogSetPool(pid, allocPoint);
 	}
 
 	// Set the migrator contract. Can only be called by the owner.
@@ -183,6 +185,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		pool.accFermionPerShare = _getAccFermionPerShare(pool.accFermionPerShare, fermionReward, lpSupply);
 		_fermion.mint(address(this), fermionReward);
 		pool.lastRewardBlock = block.number;
+		emit LogUpdatePool(pid, pool.lastRewardBlock, lpSupply, pool.accFermionPerShare);
 		return pool;
 	}
 

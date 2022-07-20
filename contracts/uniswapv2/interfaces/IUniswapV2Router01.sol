@@ -2,7 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-interface IUniswapV2Router01
+// UniswapV2Router01 should not be used any longer, because of the discovery of a low severity bug
+// and the fact that some methods do not work with tokens that take fees on transfer. 
+// The current recommendation is to use UniswapV2Router02.
+
+interface IUniswapV2Router01_Deprecated
 {
 	function addLiquidity(
 		address tokenA,
