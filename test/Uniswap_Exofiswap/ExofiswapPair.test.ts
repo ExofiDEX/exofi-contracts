@@ -5,7 +5,7 @@ import { BigNumber, Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { ADDRESS_ZERO, AdvanceBlock, EncodePrice, ExpandTo18Decimals, StartAutomine, StopAutomine } from "../helpers";
-import { IERC20, IExofiswapFactory, IExofiswapPair, UniswapV2Factory, UniswapV2Pair } from "../../typechain-types";
+import { IERC20, IERC20Metadata, IExofiswapFactory, IExofiswapPair, UniswapV2Factory, UniswapV2Pair } from "../../typechain-types";
 
 describe("ExofiswapPair", () =>
 {
@@ -28,8 +28,8 @@ describe("ExofiswapPair", () =>
 		let MockTokenFactory: ContractFactory;
 		let ExoContract: Contract;
 		let UniContract: Contract;
-		let ExoMockToken0: IERC20;
-		let ExoMockToken1: IERC20;
+		let ExoMockToken0: IERC20Metadata;
+		let ExoMockToken1: IERC20Metadata;
 		let UniMockToken0: IERC20;
 		let UniMockToken1: IERC20;
 		let ExofiswapFactory: IExofiswapFactory;
@@ -40,9 +40,9 @@ describe("ExofiswapPair", () =>
 		beforeEach(async () =>
 		{
 			MockTokenFactory = await ethers.getContractFactory("ERC20Mock");
-			ExoMockToken0 = (await MockTokenFactory.deploy("MockToken0", "MKT0", ExpandTo18Decimals(1000000000))) as IERC20;
+			ExoMockToken0 = (await MockTokenFactory.deploy("MockToken0", "MKT0", ExpandTo18Decimals(1000000000))) as IERC20Metadata;
 			await ExoMockToken0.deployed();
-			ExoMockToken1 = (await MockTokenFactory.deploy("MockToken1", "MKT1", ExpandTo18Decimals(1000000000))) as IERC20;
+			ExoMockToken1 = (await MockTokenFactory.deploy("MockToken1", "MKT1", ExpandTo18Decimals(1000000000))) as IERC20Metadata;
 			await ExoMockToken1.deployed();
 			UniMockToken0 = (await MockTokenFactory.deploy("MockToken0", "MKT0", ExpandTo18Decimals(1000000000))) as IERC20;
 			await UniMockToken0.deployed();
@@ -90,7 +90,7 @@ describe("ExofiswapPair", () =>
 			expect(await ExofiswapPair().factory()).to.equal(ExofiswapFactory.address);
 			expect(await ExofiswapPair().symbol()).to.equal("ENERGY");
 			expect(await ExofiswapPair().decimals()).to.equal(18);
-			const exoPairName = ExoMockToken0.address < ExoMockToken1.address ? "MKT0/MKT1 Plasma" : "MKT1/MKT0 Plasma";
+			const exoPairName = `${await ExoMockToken0.symbol()}/${await ExoMockToken1.symbol()} Plasma`;
 			expect(await ExofiswapPair().name()).to.equal(exoPairName);
 			expect(await ExofiswapPair().MINIMUM_LIQUIDITY()).to.equal(MINIMUM_LIQUIDITY);
 
