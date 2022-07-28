@@ -15,6 +15,14 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	using UQ144x112 for uint256;
 	using SafeERC20 for IERC20Metadata;
 
+	struct SwapAmount // needed to reduce stack deep;
+	{
+		uint256 balance0;
+		uint256 balance1;
+		uint112 reserve0;
+		uint112 reserve1;
+	}
+
 	uint256 private constant _MINIMUM_LIQUIDITY = 10**3;
 	uint256 private _price0CumulativeLast;
 	uint256 private _price1CumulativeLast;
@@ -46,26 +54,27 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	// this low-level function should be called from a contract which performs important safety checks
 	function burn(address to) override public lock returns (uint, uint)
 	{
-		(uint112 reserve0, uint112 reserve1,) = getReserves(); // gas savings
-		IERC20Metadata ltoken0 = _token0;                      // gas savings
-		IERC20Metadata ltoken1 = _token1;                      // gas savings
-		uint256 balance0 = ltoken0.balanceOf(address(this));
-		uint256 balance1 = ltoken1.balanceOf(address(this));
+		SwapAmount memory sa;
+		(sa.reserve0, sa.reserve1,) = getReserves(); // gas savings
+		IERC20Metadata ltoken0 = _token0;            // gas savings
+		IERC20Metadata ltoken1 = _token1;            // gas savings
+		sa.balance0 = ltoken0.balanceOf(address(this));
+		sa.balance1 = ltoken1.balanceOf(address(this));
 		uint256 liquidity = balanceOf(address(this));
 
 		// Can not overflow
-		bool feeOn = _mintFee(_unsafeMul(uint256(reserve0), uint256(reserve1)));
+		bool feeOn = _mintFee(_unsafeMul(uint256(sa.reserve0), uint256(sa.reserve1)));
 		uint256 totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
-		uint256 amount0 = _unsafeDiv(liquidity * balance0, totalSupply); // using balances ensures pro-rata distribution
-		uint256 amount1 = _unsafeDiv(liquidity * balance1, totalSupply); // using balances ensures pro-rata distribution
+		uint256 amount0 = _unsafeDiv(liquidity * sa.balance0, totalSupply); // using balances ensures pro-rata distribution
+		uint256 amount1 = _unsafeDiv(liquidity * sa.balance1, totalSupply); // using balances ensures pro-rata distribution
 		require(amount0 > 0 && amount1 > 0, "EP: INSUFFICIENT_LIQUIDITY");
 		_burn(address(this), liquidity);
 		ltoken0.safeTransfer(to, amount0);
 		ltoken1.safeTransfer(to, amount1);
-		balance0 = ltoken0.balanceOf(address(this));
-		balance1 = ltoken1.balanceOf(address(this));
+		sa.balance0 = ltoken0.balanceOf(address(this));
+		sa.balance1 = ltoken1.balanceOf(address(this));
 
-		_update(balance0, balance1, reserve0, reserve1);
+		_update(sa);
 		if (feeOn)
 		{
 			unchecked // Can not overflow
@@ -80,39 +89,40 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	// this low-level function should be called from a contract which performs important safety checks
 	function mint(address to) override public lock returns (uint256)
 	{
-		(uint112 reserve0, uint112 reserve1,) = getReserves(); // gas savings
-		uint balance0 = _token0.balanceOf(address(this));
-		uint balance1 = _token1.balanceOf(address(this));
-		uint amount0 = balance0 - reserve0;
-		uint amount1 = balance1 - reserve1;
+		SwapAmount memory sa;
+		(sa.reserve0, sa.reserve1,) = getReserves(); // gas savings
+		sa.balance0 = _token0.balanceOf(address(this));
+		sa.balance1 = _token1.balanceOf(address(this));
+		uint256 amount0 = sa.balance0 - sa.reserve0;
+		uint256 amount1 = sa.balance1 - sa.reserve1;
 
-		bool feeOn = _mintFee(_unsafeMul(uint256(reserve0), uint256(reserve1)));
+		bool feeOn = _mintFee(_unsafeMul(uint256(sa.reserve0), uint256(sa.reserve1)));
 		uint256 totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
 		uint256 liquidity;
 
 		if (totalSupply == 0)
 		{
-			address migrator = _factory.migrator();
-			if (_msgSender() == migrator)
+			IMigrator migrator = _factory.migrator();
+			if (_msgSender() == address(migrator))
 			{
-				liquidity = IMigrator(migrator).desiredLiquidity();
+				liquidity = migrator.desiredLiquidity();
 				require(liquidity > 0 && liquidity != type(uint256).max, "EP: Liquidity Error");
 			}
 			else
 			{
-				require(migrator == address(0), "EP: Migrator set");
+				require(address(migrator) == address(0), "EP: Migrator set");
 				liquidity = Math.sqrt(amount0 * amount1) - _MINIMUM_LIQUIDITY;
-				_mint(address(0), _MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+				_mintMinimumLiquidity();
 			}
 		}
 		else
 		{
-			liquidity = Math.min((amount0 * totalSupply) / reserve0, (amount1 * totalSupply) / reserve1);
+			liquidity = Math.min((amount0 * totalSupply) / sa.reserve0, (amount1 * totalSupply) / sa.reserve1);
 		}
 		require(liquidity > 0, "EP: INSUFFICIENT_LIQUIDITY");
 		_mint(to, liquidity);
 
-		_update(balance0, balance1, reserve0, reserve1);
+		_update(sa);
 		if (feeOn)
 		{
 			_kLast = uint256(_reserve0) * uint256(_reserve1); // reserve0 and reserve1 are up-to-date
@@ -135,43 +145,29 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	function swap(uint256 amount0Out, uint256 amount1Out, IExofiswapCallee to, bytes calldata data) override public lock
 	{
 		require(amount0Out > 0 || amount1Out > 0, "EP: INSUFFICIENT_OUTPUT_AMOUNT");
-		(uint112 reserve0, uint112 reserve1,) = getReserves(); // gas savings
-		require(amount0Out < reserve0 && amount1Out < reserve1, "EP: INSUFFICIENT_LIQUIDITY");
+		SwapAmount memory sa;
+		(sa.reserve0, sa.reserve1, ) = getReserves(); // gas savings
+		require(amount0Out < sa.reserve0 && amount1Out < sa.reserve1, "EP: INSUFFICIENT_LIQUIDITY");
 
-		uint256 balance0;
-		uint256 balance1;
-		{
-			// scope for _token{0,1}, avoids stack too deep errors
-			IERC20Metadata ltoken0 = _token0;
-			IERC20Metadata ltoken1 = _token1;
-			require(address(to) != address(ltoken0) && address(to) != address(ltoken1), "EP: INVALID_TO");
-			if (amount0Out > 0) ltoken0.safeTransfer(address(to), amount0Out); // optimistically transfer tokens
-			if (amount1Out > 0) ltoken1.safeTransfer(address(to), amount1Out); // optimistically transfer tokens
-			if (data.length > 0) to.exofiswapCall(_msgSender(), amount0Out, amount1Out, data);
-			balance0 = ltoken0.balanceOf(address(this));
-			balance1 = ltoken1.balanceOf(address(this));
-		}
+		(sa.balance0, sa.balance1) = _transferTokens(to, amount0Out, amount1Out, data);
 
-		uint256 div0 = _unsafeSub(reserve0, amount0Out);
-		uint256 div1 = _unsafeSub(reserve1, amount1Out);
-		uint amount0In = balance0 > div0 ? _unsafeSub(balance0, div0) : 0;
-		uint amount1In = balance1 > div1 ? _unsafeSub(balance1, div1) : 0;
+		(uint256 amount0In, uint256 amount1In) = _getInAmounts(amount0Out, amount1Out, sa);
 		require(amount0In > 0 || amount1In > 0, "EP: INSUFFICIENT_INPUT_AMOUNT");
 		{ // scope for reserve{0,1} Adjusted, avoids stack too deep errors
-			uint256 balance0Adjusted = (balance0 * 1000) - (amount0In * 3);
-			uint256 balance1Adjusted = (balance1 * 1000) - (amount1In * 3);
-			require(balance0Adjusted * balance1Adjusted >= uint256(reserve0) * uint256(reserve1) * (1000**2), "EP: K");
+			uint256 balance0Adjusted = (sa.balance0 * 1000) - (amount0In * 3); // 0.3% Fee
+			uint256 balance1Adjusted = (sa.balance1 * 1000) - (amount1In * 3); // 0.3% Fee
+			require(balance0Adjusted * balance1Adjusted >= uint256(sa.reserve0) * uint256(sa.reserve1) * (1000**2), "EP: K");
 		}
 
-		_update(balance0, balance1, reserve0, reserve1);
-		emit Swap(_msgSender(), amount0In, amount1In, amount0Out, amount1Out, address(to));
+		_update(sa);
+		emit Swap(_msgSender(), amount0In, amount1In, amount0Out, amount1Out, to);
 	}
 
 	
 	// force reserves to match balances
 	function sync() override public lock
 	{
-		_update(_token0.balanceOf(address(this)), _token1.balanceOf(address(this)), _reserve0, _reserve1);
+		_update(SwapAmount(_token0.balanceOf(address(this)), _token1.balanceOf(address(this)), _reserve0, _reserve1));
 	}
 	
 	function factory() override public view returns (IExofiswapFactory)
@@ -214,6 +210,26 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 		return _MINIMUM_LIQUIDITY;
 	}
 
+	function _mintMinimumLiquidity() private
+	{
+		require(_totalSupply == 0, "EP: Total supply not 0");
+
+		_totalSupply += _MINIMUM_LIQUIDITY;
+		_balances[address(0)] += _MINIMUM_LIQUIDITY;
+		emit Transfer(address(0), address(0), _MINIMUM_LIQUIDITY);
+	}
+
+	function _transferTokens(IExofiswapCallee to, uint256 amount0Out, uint256 amount1Out, bytes calldata data) private returns (uint256, uint256)
+	{
+		IERC20Metadata ltoken0 = _token0;
+		IERC20Metadata ltoken1 = _token1;
+		require(address(to) != address(ltoken0) && address(to) != address(ltoken1), "EP: INVALID_TO");
+		if (amount0Out > 0) ltoken0.safeTransfer(address(to), amount0Out); // optimistically transfer tokens
+		if (amount1Out > 0) ltoken1.safeTransfer(address(to), amount1Out); // optimistically transfer tokens
+		if (data.length > 0) to.exofiswapCall(_msgSender(), amount0Out, amount1Out, data);
+		return (ltoken0.balanceOf(address(this)), ltoken1.balanceOf(address(this)));
+	}
+
 	// if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
 	function _mintFee(uint256 k) private returns (bool)
 	{
@@ -246,25 +262,33 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	}
 
 	// update reserves and, on the first call per block, price accumulators
-	function _update(uint256 balance0, uint256 balance1, uint112 reserve0, uint112 reserve1) private
+	function _update(SwapAmount memory sa) private
 	{
-		require(balance0 <= type(uint112).max && balance1 <= type(uint112).max, "EP: OVERFLOW");
+		require(sa.balance0 <= type(uint112).max && sa.balance1 <= type(uint112).max, "EP: OVERFLOW");
 		// solhint-disable-next-line not-rely-on-time
 		uint32 blockTimestamp = uint32(block.timestamp % 2**32);
 		uint32 timeElapsed = _unsafeSub32(blockTimestamp, _blockTimestampLast); // overflow is desired
-		if (timeElapsed > 0 && reserve0 != 0 && reserve1 != 0)
+		if (timeElapsed > 0 && sa.reserve0 != 0 && sa.reserve1 != 0)
 		{
 			// * never overflows, and + overflow is desired
 			unchecked
 			{
-				_price0CumulativeLast += (UQ144x112.encode(reserve1).uqdiv(reserve0) * timeElapsed);
-				_price1CumulativeLast += (UQ144x112.encode(reserve0).uqdiv(reserve1) * timeElapsed);
+				_price0CumulativeLast += (UQ144x112.encode(sa.reserve1).uqdiv(sa.reserve0) * timeElapsed);
+				_price1CumulativeLast += (UQ144x112.encode(sa.reserve0).uqdiv(sa.reserve1) * timeElapsed);
 			}
 		}
-		_reserve0 = uint112(balance0);
-		_reserve1 = uint112(balance1);
+		_reserve0 = uint112(sa.balance0);
+		_reserve1 = uint112(sa.balance1);
 		_blockTimestampLast = blockTimestamp;
 		emit Sync(_reserve0, _reserve1);
+	}
+
+	function _getInAmounts(uint256 amount0Out, uint256 amount1Out, SwapAmount memory sa)
+		private pure returns(uint256, uint256)
+	{
+		uint256 div0 = _unsafeSub(sa.reserve0, amount0Out);
+		uint256 div1 = _unsafeSub(sa.reserve1, amount1Out);
+		return (sa.balance0 > div0 ? _unsafeSub(sa.balance0, div0) : 0, sa.balance1 > div1 ? _unsafeSub(sa.balance1, div1) : 0);
 	}
 
 	function _unsafeDiv(uint256 a, uint256 b) private pure returns (uint256)

@@ -1,61 +1,75 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@exoda/contracts/access/Ownable.sol";
 import "./interfaces/IExofiswapFactory.sol";
-import './UniswapV2Pair.sol';
+import "./interfaces/IExofiswapPair.sol";
+import "./ExofiswapPair.sol";
 
-contract ExofiswapFactory is IUniswapV2Factory {
-    address public override feeTo;
-    address public override feeToSetter;
-    address public override migrator;
+contract ExofiswapFactory is IExofiswapFactory, Ownable
+{
+	address private _feeTo;
+	IMigrator private _migrator;
+	mapping(IERC20Metadata => mapping(IERC20Metadata => IExofiswapPair)) private _getPair;
+	IExofiswapPair[] private _allPairs;
 
-    mapping(address => mapping(address => address)) public override getPair;
-    address[] public override allPairs;
+	constructor()
+	{} // solhint-disable-line no-empty-blocks
 
-    event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+	function createPair(IERC20Metadata tokenA, IERC20Metadata tokenB) override public returns (IExofiswapPair)
+	{
+		require(tokenA != tokenB, "EF: IDENTICAL_ADDRESSES");
+		(IERC20Metadata token0, IERC20Metadata token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+		require(address(token0) != address(0), "EF: ZERO_ADDRESS");
+		require(address(_getPair[token0][token1]) == address(0), "EF: PAIR_EXISTS"); // single check is sufficient
 
-    constructor(address _feeToSetter) public {
-        feeToSetter = _feeToSetter;
-    }
+		bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+		IExofiswapPair pair = new ExofiswapPair{salt: salt}(token0, token1); // Use create2
 
-    function allPairsLength() external override view returns (uint) {
-        return allPairs.length;
-    }
+		_getPair[token0][token1] = pair;
+		_getPair[token1][token0] = pair; // populate mapping in the reverse direction
+		_allPairs.push(pair);
+		emit PairCreated(token0, token1, pair, _allPairs.length);
+		return pair;
+	}
 
-    function pairCodeHash() external pure returns (bytes32) {
-        return keccak256(type(UniswapV2Pair).creationCode);
-    }
+	function setFeeTo(address newFeeTo) override public onlyOwner
+	{
+		_feeTo = newFeeTo;
+	}
 
-    function createPair(address tokenA, address tokenB) external override returns (address pair) {
-        require(tokenA != tokenB, "ExofiswapFactory: IDENTICAL_ADDRESSES");
-        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), "ExofiswapFactory: ZERO_ADDRESS");
-        require(getPair[token0][token1] == address(0), "ExofiswapFactory: PAIR_EXISTS"); // single check is sufficient
-        bytes memory bytecode = type(UniswapV2Pair).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        assembly {
-            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-        UniswapV2Pair(pair).initialize(token0, token1);
-        getPair[token0][token1] = pair;
-        getPair[token1][token0] = pair; // populate mapping in the reverse direction
-        allPairs.push(pair);
-        emit PairCreated(token0, token1, pair, allPairs.length);
-    }
+	function setMigrator(IMigrator newMigrator) override public onlyOwner
+	{
+		_migrator = newMigrator;
+	}
 
-    function setFeeTo(address _feeTo) external override {
-        require(msg.sender == feeToSetter, "ExofiswapFactory: FORBIDDEN");
-        feeTo = _feeTo;
-    }
+	function allPairs(uint256 index) override public view returns (IExofiswapPair)
+	{
+		return _allPairs[index];
+	}
 
-    function setMigrator(address _migrator) external override {
-        require(msg.sender == feeToSetter, "ExofiswapFactory: FORBIDDEN");
-        migrator = _migrator;
-    }
+	function allPairsLength() override public view returns (uint256)
+	{
+		return _allPairs.length;
+	}
 
-    function setFeeToSetter(address newFeeToSetter) external override {
-        require(msg.sender == feeToSetter, "ExofiswapFactory: FORBIDDEN");
-        feeToSetter = newFeeToSetter;
-    }
+	function feeTo() override public view returns (address)
+	{
+		return _feeTo;
+	}
 
+	function getPair(IERC20Metadata tokenA, IERC20Metadata tokenB) override public view returns (IExofiswapPair)
+	{
+		return _getPair[tokenA][tokenB];
+	}
+
+	function migrator() override public view returns (IMigrator)
+	{
+		return _migrator;
+	}
+
+	function pairCodeHash() override public pure returns (bytes32)
+	{
+		return keccak256(type(ExofiswapPair).creationCode);
+	}
 }

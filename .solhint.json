@@ -6,6 +6,7 @@
 	"rules": {
 		"avoid-suicide": "error",
 		"avoid-sha3": "error",
+		"reentrancy": "error",
 		"code-complexity": [
 			"warn",
 			7
@@ -40,7 +41,9 @@
 				"strict": true
 			}
 		],
+		"func-ordering": "warn",
 		"ordering": "warn",
+		"visibility-modifier-order": "warn",
 		"func-visibility": [
 			"error",
 			{

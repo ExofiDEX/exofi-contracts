@@ -500,7 +500,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().connect(Bob).deposit(0, "100", Bob.address);
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("900");
 
-			await MagneticFieldGenerator().connect(Bob).emergencyWithdraw(0);
+			await MagneticFieldGenerator().connect(Bob).emergencyWithdraw(0, Bob.address);
 			expect(await lpToken.balanceOf(Bob.address)).to.equal("1000");
 		});
 
