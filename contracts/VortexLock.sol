@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable.sol";
-import "./interfaces/IPulsar.sol";
+import "./interfaces/IVortexLock.sol";
 import "@exoda/contracts/access/Ownable.sol";
 
-contract Pulsar is IPulsar, Ownable
+contract VortexLock is IVortexLock, Ownable
 {
 	uint256 private immutable _startBlockPhase1;
 	uint256 private immutable _startBlockPhase2;
@@ -41,7 +41,7 @@ contract Pulsar is IPulsar, Ownable
 
 	function loadToken(uint256 amount) override public onlyOwner
 	{
-		require(block.number < _startBlockPhase1, "Pulsar: Can only set before start block"); // solhint-disable-line reason-string
+		require(block.number < _startBlockPhase1, "VortexLock: Can only set before start block"); // solhint-disable-line reason-string
 		uint256 fraction = (amount * 16) / 15;
 		unchecked
 		{
@@ -65,14 +65,14 @@ contract Pulsar is IPulsar, Ownable
 			_amountPerBlockPhase4 = (amount - (cleanAmountP1 + cleanAmountP2 + cleanAmountP3)) / (_endBlock - _startBlockPhase4);
 		}
 		uint256 allowance = _token.allowance(owner(), address(this));
-		require(allowance == amount, "Pulsar: Allowance must be equal to amount");  // solhint-disable-line reason-string
+		require(allowance == amount, "VortexLock: Allowance must be equal to amount");  // solhint-disable-line reason-string
 		_token.transferFrom(owner(), address(this), amount);
 	}
 
 	/// @notice Runs the last task after reaching the final block.
 	function die() override public
 	{
-		require(block.number > _finalBlock, "Pulsar: Can only be killed after final block"); // solhint-disable-line reason-string
+		require(block.number > _finalBlock, "VortexLock: Can only be killed after final block"); // solhint-disable-line reason-string
 		uint256 remainingAmount = _token.balanceOf(address(this));
 		_token.burn(remainingAmount);
 	}
@@ -80,7 +80,7 @@ contract Pulsar is IPulsar, Ownable
 	/// @notice Adds a benefitary as long as the startBlock is not reached.
 	function addBeneficiary(address benefitary) override public onlyOwner
 	{
-		require(block.number < _startBlockPhase1, "Pulsar: Can only added before start block"); // solhint-disable-line reason-string
+		require(block.number < _startBlockPhase1, "VortexLock: Can only added before start block"); // solhint-disable-line reason-string
 		_lastClaimedBlock[benefitary] = _startBlockPhase1;
 		++_benefitaryCount;
 	}
@@ -88,7 +88,7 @@ contract Pulsar is IPulsar, Ownable
 	function claim() override public
 	{
 		address sender = msg.sender;
-		require(_lastClaimedBlock[sender] > 0, "Pulsar: Only benefitaries can claim"); // solhint-disable-line reason-string
+		require(_lastClaimedBlock[sender] > 0, "VortexLock: Only benefitaries can claim"); // solhint-disable-line reason-string
 		uint256 amount = getClaimableAmount();
 		_lastClaimedBlock[sender] = block.number;
 		_alreadyClaimedAmount[sender] += amount;

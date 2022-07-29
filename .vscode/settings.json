@@ -3,7 +3,7 @@
   "mochaExplorer.watch": "test/**/*.{j,t}s",
   "mochaExplorer.parallel": false,
   "mochaExplorer.jobs": 1,
-  "mochaExplorer.fullTrace": false,
+  "mochaExplorer.fullTrace": true,
   "mochaExplorer.exit": true,
   "mochaExplorer.require": ["ts-node/register", "hardhat/register"],
   "mochaExplorer.timeout": 3600000

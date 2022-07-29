@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@exoda/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/IExofiswapERC20.sol";
 
-contract ExofiswapERC20 is IExofiswapERC20, ERC20
+contract ExofiswapERC20 is ERC20, IExofiswapERC20
 {
 	// keccak256("permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 	bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;

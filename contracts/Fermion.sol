@@ -8,7 +8,7 @@ import "./interfaces/IFermion.sol";
 /**
 * @dev Implementation of the {IFermion} interface.
 */
-contract Fermion is IFermion, ERC20Burnable, Ownable
+contract Fermion is Ownable, ERC20Burnable, IFermion
 {
 	uint256 private constant _MAX_SUPPLY = (1000000000 * (10**18));
 

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove.sol";
 import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata.sol";
 
-interface IExofiswapERC20 is IERC20Metadata, IERC20AltApprove
+interface IExofiswapERC20 is IERC20AltApprove, IERC20Metadata
 {
 	// Functions as described in EIP 2612
 	function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external;

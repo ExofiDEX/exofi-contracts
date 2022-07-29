@@ -6,15 +6,15 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { AdvanceBlock, AdvanceBlockTo, GetBlockNumber, StartAutomine, StopAutomine } from "./helpers";
 
-import { IERC20Burnable, IPulsar } from "../typechain-types";
+import { IERC20Burnable, IVortexLock } from "../typechain-types";
 
-describe("Pulsar Function Test @skip-on-coverage", () =>
+describe("VortexLock Function Test @skip-on-coverage", () =>
 {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	if ((config as any).gasReporter.enabled === true) return;
 
 	let TokenFactory: ContractFactory;
-	let PulsarFactory: ContractFactory;
+	let VortexLockFactory: ContractFactory;
 	let Signers: SignerWithAddress[];
 	let Alice: SignerWithAddress;
 	let Bob: SignerWithAddress;
@@ -30,7 +30,7 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 
 	before(async () =>
 	{
-		PulsarFactory = await ethers.getContractFactory("Pulsar");
+		VortexLockFactory = await ethers.getContractFactory("VortexLock");
 		TokenFactory = await ethers.getContractFactory("ERC20BurnableMock");
 		Signers = await ethers.getSigners();
 		Alice = Signers[0];
@@ -45,9 +45,9 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 		Jan = Signers[9];
 	});
 
-	context("Test over lifetime of Pulsar", async () =>
+	context("Test over lifetime of VortexLock", async () =>
 	{
-		const Pulsar = () => Contract as IPulsar;
+		const VortexLock = () => Contract as IVortexLock;
 		let startBlockNumber: number;
 		let Token: IERC20Burnable;
 
@@ -57,24 +57,24 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			startBlockNumber = cb;
 			Token = (await TokenFactory.deploy("MockBurnable", "MBT", 1000000)) as IERC20Burnable;
 			await Token.deployed();
-			Contract = await PulsarFactory.deploy(cb + 1000, cb + 11000, cb + 12000, Token.address);
+			Contract = await VortexLockFactory.deploy(cb + 1000, cb + 11000, cb + 12000, Token.address);
 			await Contract.deployed();
 		});
 
-		it("Pulsar.claim: Claim test 9 benefitaries", async () =>
+		it("VortexLock.claim: Claim test 9 benefitaries", async () =>
 		{
 			// Arrange
-			await Token.approve(Pulsar().address, 1000000);
-			await Pulsar().loadToken(1000000);
-			await Pulsar().addBeneficiary(Bob.address);
-			await Pulsar().addBeneficiary(Carol.address);
-			await Pulsar().addBeneficiary(Dave.address);
-			await Pulsar().addBeneficiary(Elise.address);
-			await Pulsar().addBeneficiary(Fabian.address);
-			await Pulsar().addBeneficiary(Gabi.address);
-			await Pulsar().addBeneficiary(Hank.address);
-			await Pulsar().addBeneficiary(Ines.address);
-			await Pulsar().addBeneficiary(Jan.address);
+			await Token.approve(VortexLock().address, 1000000);
+			await VortexLock().loadToken(1000000);
+			await VortexLock().addBeneficiary(Bob.address);
+			await VortexLock().addBeneficiary(Carol.address);
+			await VortexLock().addBeneficiary(Dave.address);
+			await VortexLock().addBeneficiary(Elise.address);
+			await VortexLock().addBeneficiary(Fabian.address);
+			await VortexLock().addBeneficiary(Gabi.address);
+			await VortexLock().addBeneficiary(Hank.address);
+			await VortexLock().addBeneficiary(Ines.address);
+			await VortexLock().addBeneficiary(Jan.address);
 			await StopAutomine();
 
 			let blockcount = 0;
@@ -114,27 +114,27 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 			until = (startBlockNumber + 12000) - start;
 			({ bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount } = await RunClaimTest(5, until, 213, 106, 54, 27, bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount));
 			// After final all has to be 0
-			expect(await Pulsar().connect(Alice).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Bob).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Carol).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Dave).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Elise).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Fabian).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Gabi).getClaimableAmount()).to.equal(3000);
-			expect(await Pulsar().connect(Hank).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Ines).getClaimableAmount()).to.equal(10500);
-			expect(await Pulsar().connect(Jan).getClaimableAmount()).to.equal(111111);
+			expect(await VortexLock().connect(Alice).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Bob).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Carol).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Dave).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Elise).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Fabian).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Gabi).getClaimableAmount()).to.equal(3000);
+			expect(await VortexLock().connect(Hank).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Ines).getClaimableAmount()).to.equal(10500);
+			expect(await VortexLock().connect(Jan).getClaimableAmount()).to.equal(111111);
 			await AdvanceBlock();
-			expect(await Pulsar().connect(Alice).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Bob).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Carol).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Dave).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Elise).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Fabian).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Gabi).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Hank).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Ines).getClaimableAmount()).to.equal(0);
-			expect(await Pulsar().connect(Jan).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Alice).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Bob).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Carol).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Dave).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Elise).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Fabian).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Gabi).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Hank).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Ines).getClaimableAmount()).to.equal(0);
+			expect(await VortexLock().connect(Jan).getClaimableAmount()).to.equal(0);
 			await StartAutomine();
 		});
 
@@ -207,7 +207,7 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 				expect(await Token.balanceOf(Hank.address)).to.equal(hank.claimed);
 				expect(await Token.balanceOf(Ines.address)).to.equal(ines.claimed);
 				expect(await Token.balanceOf(Jan.address)).to.equal(jan.claimed);
-				expect(await Token.balanceOf(Pulsar().address)).to.equal(1000000 - (bob.claimed + carol.claimed + dave.claimed + elise.claimed + fabian.claimed + gabi.claimed + hank.claimed + ines.claimed + jan.claimed));
+				expect(await Token.balanceOf(VortexLock().address)).to.equal(1000000 - (bob.claimed + carol.claimed + dave.claimed + elise.claimed + fabian.claimed + gabi.claimed + hank.claimed + ines.claimed + jan.claimed));
 			}
 			return { bob, carol, dave, elise, fabian, gabi, hank, ines, jan, blockcount };
 		}
@@ -216,7 +216,7 @@ describe("Pulsar Function Test @skip-on-coverage", () =>
 		{
 			if (i % userClaims.pause === 0)
 			{
-				await Pulsar().connect(user).claim();
+				await VortexLock().connect(user).claim();
 				userClaims.claimed = claim;
 			}
 			return { userClaims };

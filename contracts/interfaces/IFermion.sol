@@ -9,7 +9,7 @@ import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata.sol";
 /**
  * @dev Interface of the Fermion token.
  */
-interface IFermion is IERC20Burnable, IERC20Metadata, IERC20AltApprove, IOwnable
+interface IFermion is IOwnable, IERC20AltApprove, IERC20Metadata, IERC20Burnable
 {
 	/**
 	* @dev Mints `amount` tokens to `account`.
