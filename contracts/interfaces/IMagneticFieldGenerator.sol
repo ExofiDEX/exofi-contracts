@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@exoda/contracts/interfaces/token/ERC20/IERC20.sol";
 import "./IFermion.sol";
 import "./IMigratorDevice.sol";
+import "./IUniqueAddressList.sol";
 
 interface IMagneticFieldGenerator
 {
@@ -14,6 +15,8 @@ interface IMagneticFieldGenerator
 		uint256 allocPoint; // How many allocation points assigned to this pool. FMNs to distribute per block.
 		uint256 lastRewardBlock; // Last block number that FMNs distribution occurs.
 		uint256 accFermionPerShare; // Accumulated FMNs per share, times _ACC_FERMION_PRECISSION. See below.
+		uint256 initialLock; // Block until withdraw from the pool is not possible.
+		IUniqueAddressList participants; // Every address that participates in that pool.
 	}
 
 	// Info of each user.
@@ -42,7 +45,12 @@ interface IMagneticFieldGenerator
 	event LogUpdatePool(uint256 indexed pid, uint256 lastRewardBlock, uint256 lpSupply, uint256 accFermionPerShare);
 	event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 
-	function add(uint256 allocPoint, IERC20 lpToken) external;
+	/// @notice Add a new LP to the pool. Can only be called by the owner.
+	/// WARNING DO NOT add the same LP token more than once. Rewards will be messed up if you do.
+	/// @param allocPoint AP of the new pool.
+	/// @param lpToken Address of the LP ERC-20 token.
+	/// @param lockPeriod Number of Blocks the pool should disallow withdraws of all kind.
+	function add(uint256 allocPoint, IERC20 lpToken, uint256 lockPeriod) external;
 	function deposit(uint256 pid, uint256 amount, address to) external;
 	function disablePool(uint256 pid) external;
 	function emergencyWithdraw(uint256 pid, address to) external;
@@ -52,6 +60,7 @@ interface IMagneticFieldGenerator
 	function migrate(uint256 pid) external;
 	function renounceOwnership() external;
 	function set(uint256 pid, uint256 allocPoint) external;
+	function setFermionPerBlock(uint256 fermionPerBlock) external;
 	function setMigrator(IMigratorDevice migratorContract) external;
 	function transferOwnership(address newOwner) external;
 	function updatePool(uint256 pid) external returns(PoolInfo memory);

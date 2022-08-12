@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata.sol";
 import "@exoda/contracts/access/Ownable.sol";
 import "./interfaces/IExofiswapFactory.sol";
 import "./interfaces/IExofiswapPair.sol";
@@ -15,6 +16,17 @@ contract ExofiswapFactory is IExofiswapFactory, Ownable
 
 	constructor()
 	{} // solhint-disable-line no-empty-blocks
+
+	function pairAddress(IERC20Metadata token0, IERC20Metadata token1) override external view returns (IExofiswapPair)
+	{
+		(IERC20Metadata tokenL, IERC20Metadata tokenR) = token0 < token1 ? (token0, token1) : (token1, token0);
+		return IExofiswapPair(address(uint160(uint256(keccak256(abi.encodePacked(
+				hex'ff',
+				address(this),
+				keccak256(abi.encodePacked(tokenL, tokenR)),
+				keccak256(abi.encodePacked(type(ExofiswapPair).creationCode, abi.encode(tokenL, tokenR))) // init code hash
+			))))));
+	}
 
 	function createPair(IERC20Metadata tokenA, IERC20Metadata tokenB) override public returns (IExofiswapPair)
 	{

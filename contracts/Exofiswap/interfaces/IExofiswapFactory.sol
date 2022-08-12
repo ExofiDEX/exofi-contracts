@@ -19,6 +19,7 @@ interface IExofiswapFactory is IOwnable
 	function feeTo() external view returns (address);
 	function getPair(IERC20Metadata tokenA, IERC20Metadata tokenB) external view returns (IExofiswapPair);
 	function migrator() external view returns (IMigrator);
+	function pairAddress(IERC20Metadata token0, IERC20Metadata token1) external view returns (IExofiswapPair);
 
 	function pairCodeHash() external pure returns (bytes32);
 }

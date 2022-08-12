@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "@exoda/contracts/access/Ownable.sol";
 import "@exoda/contracts/interfaces/token/ERC20/IERC20.sol";
 import "@exoda/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./UniqueAddressList.sol";
 import "./interfaces/IMagneticFieldGenerator.sol";
 
 // MagneticFieldGenerator is the master of Fermion. He can make Fermion and he is a fair machine.
@@ -12,24 +13,24 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 {
 	using SafeERC20 for IERC20;
 	
-	// FMN tokens created per block.
-	uint256 private immutable _fermionPerBlock;
-	// The FMN TOKEN!
-	IFermion private immutable _fermion;
-	// The block number when FMN mining starts.
-	uint256 private immutable _startBlock;
 	// Accumulated Fermion Precision
 	uint256 private constant _ACC_FERMION_PRECISSION = 1e12;
-	// Info of each pool.
-	PoolInfo[] private _poolInfo;
+	// The block number when FMN mining starts.
+	uint256 private immutable _startBlock;
+	// FMN tokens created per block.
+	uint256 private _fermionPerBlock;
+	// Total allocation points. Must be the sum of all allocation points in all pools.
+	uint256 private _totalAllocPoint; // Initializes with 0
+	// The FMN TOKEN!
+	IFermion private immutable _fermion;
 	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
 	IMigratorDevice private _migrator;
 	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
 	IMagneticFieldGenerator private _successor;
 	// Info of each user that stakes LP tokens.
 	mapping(uint256 => mapping(address => UserInfo)) private _userInfo;
-	// Total allocation points. Must be the sum of all allocation points in all pools.
-	uint256 private _totalAllocPoint; // Initializes with 0
+	// Info of each pool.
+	PoolInfo[] private _poolInfo;
 
 	constructor(IFermion fermion, uint256 fermionPerBlock, uint256 startBlock)
 	{
@@ -38,11 +39,8 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		_startBlock = startBlock;
 	}
 
-	/// @notice Add a new LP to the pool. Can only be called by the owner.
-	/// WARNING DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-	/// @param allocPoint AP of the new pool.
-	/// @param lpToken Address of the LP ERC-20 token.
-	function add(uint256 allocPoint, IERC20 lpToken) override public onlyOwner
+	/// @inheritdoc IMagneticFieldGenerator
+	function add(uint256 allocPoint, IERC20 lpToken, uint256 lockPeriod) override public onlyOwner
 	{
 		// Do every time.
 		// If a pool prevents massUpdatePools because of accFermionPerShare overflow disable the responsible pool with disablePool.
@@ -54,10 +52,13 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 				lpToken: lpToken,
 				allocPoint: allocPoint,
 				lastRewardBlock: lastRewardBlock,
-				accFermionPerShare: 0
+				accFermionPerShare: 0,
+				initialLock: lockPeriod > 0 ? lastRewardBlock + lockPeriod : 0,
+				participants: new UniqueAddressList()
 			})
 		);
-		emit LogPoolAddition(_poolInfo.length - 1, allocPoint, lpToken);
+		
+		emit LogPoolAddition(_unsafeSub(_poolInfo.length, 1), allocPoint, lpToken); // Overflow not possible.
 	}
 
 	// Deposit LP tokens to MagneticFieldGenerator for FMN allocation.
@@ -70,6 +71,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		user.rewardDebt += int256(((amount * pool.accFermionPerShare) / _ACC_FERMION_PRECISSION));
 
 		pool.lpToken.safeTransferFrom(address(_msgSender()), address(this), amount);
+		pool.participants.add(to);
 		emit Deposit(_msgSender(), pid, amount, to);
 	}
 
@@ -85,11 +87,13 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	// Withdraw without caring about rewards. EMERGENCY ONLY.
 	function emergencyWithdraw(uint256 pid, address to) public override
 	{
-		PoolInfo storage pool = _poolInfo[pid];
+		PoolInfo memory pool = _poolInfo[pid];
+		require(pool.initialLock < block.number, "MFG: pool locked");
 		UserInfo storage user = _userInfo[pid][_msgSender()];
 
 		uint256 userAmount = user.amount;
 		pool.lpToken.safeTransfer(to, userAmount);
+		_poolInfo[pid].participants.remove(_msgSender());
 		emit EmergencyWithdraw(_msgSender(), pid, userAmount, to);
 		user.amount = 0;
 		user.rewardDebt = 0;
@@ -97,6 +101,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 
 	function handOverToSuccessor(IMagneticFieldGenerator suc) override public onlyOwner
 	{
+		//TODO: DO ALL participants
 		require(address(_successor) == address(0), "MFG: Successor already set");
 		require(suc.owner() == address(this), "MFG: Successor not owned by this");
 		_successor = suc;
@@ -149,6 +154,12 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		_totalAllocPoint = _unsafeSub(_totalAllocPoint, _poolInfo[pid].allocPoint) + allocPoint;
 		_poolInfo[pid].allocPoint = allocPoint;
 		emit LogSetPool(pid, allocPoint);
+	}
+
+	function setFermionPerBlock(uint256 fermionPerBlock) override public onlyOwner
+	{
+		massUpdatePools();
+		_fermionPerBlock = fermionPerBlock;
 	}
 
 	// Set the migrator contract. Can only be called by the owner.
@@ -206,6 +217,10 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// The intend was that if there is a rounding error and MFG does therefore not hold enouth Fermion,
 		// the available amount of Fermion will be used.
 		// Since all variables are used in divisions are uint rounding errors can only appear in the form of cut of decimals.
+		// if(user.amount == 0 && user.rewardDebt == 0)
+		// {
+		// 	_poolInfo[pid].participants.remove(_msgSender());
+		// }
 		_fermion.transfer(to, pending);
 		emit Harvest(_msgSender(), pid, pending, to);
 	}
@@ -217,6 +232,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// HINT: The owner can set pool allocPoint to 0 without pool reward update. After that all lp tokens can be withdrawn
 		// HINT: including the rewards up to the the last sucessful pool reward update.
 		PoolInfo memory pool = updatePool(pid);
+		require(pool.initialLock < block.number, "MFG: pool locked");
 		UserInfo storage user = _userInfo[pid][_msgSender()];
 		
 		uint256 userAmount = user.amount;
@@ -229,6 +245,10 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// Can not overflow. Checked with require.
 		userAmount = _unsafeSub(userAmount, amount);
 		user.amount = userAmount;
+		if(userAmount == 0 && user.rewardDebt == 0)
+		{
+			_poolInfo[pid].participants.remove(_msgSender());
+		}
 		pool.lpToken.safeTransfer(to, amount);
 		emit Withdraw(_msgSender(), pid, amount, to);
 	}
@@ -240,6 +260,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// HINT: The owner can set pool allocPoint to 0 without pool reward update. After that all lp tokens can be withdrawn
 		// HINT: including the rewards up to the the last sucessful pool reward update.
 		PoolInfo memory pool = updatePool(pid);
+		require(pool.initialLock < block.number, "MFG: pool locked");
 		UserInfo storage user = _userInfo[pid][_msgSender()];
 		
 		uint256 userAmount = user.amount;
@@ -256,6 +277,10 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		user.amount = userAmount;
 		// Division of uint can not overflow.
 		user.rewardDebt = int256(_unsafeDiv(userAmount * accFermionPerShare, _ACC_FERMION_PRECISSION));
+		if(userAmount == 0 && user.rewardDebt == 0)
+		{
+			_poolInfo[pid].participants.remove(_msgSender());
+		}
 		pool.lpToken.safeTransfer(to, amount);
 		emit Withdraw(_msgSender(), pid, amount, to);
 		emit Harvest(_msgSender(), pid, pending, to);
@@ -350,7 +375,14 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		
 		if(pool.allocPoint > 0)
 		{
-			_successor.add(pool.allocPoint , pool.lpToken);
+			if(pool.initialLock > block.number)
+			{
+				_successor.add(pool.allocPoint , pool.lpToken, pool.initialLock - block.number);
+			}
+			else
+			{
+				_successor.add(pool.allocPoint , pool.lpToken, 0);
+			}
 			disablePool(pid);
 		}
 	}

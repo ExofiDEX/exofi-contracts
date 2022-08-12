@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-abi-exporter";
+import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import "hardhat-deploy-ethers";
 import "hardhat-gas-reporter";
@@ -48,12 +49,26 @@ const config: HardhatUserConfig = {
 		// only: [],
 		// except: []
 	},
+	contractSizer:
+	{
+		runOnCompile: true,
+		only: ["Router", "Factory", "Pair"]
+	},
 	docgen: {
 		pages: pa, // "files",
 		templates: "doctemplates"
 	},
 	solidity: {
 		compilers: [
+			{
+				version: "0.6.6",
+				settings: {
+					optimizer: {
+						enabled: true,
+						runs: 500000
+					}
+				}
+			},
 			{
 				version: "0.6.12",
 				settings: {
@@ -64,11 +79,22 @@ const config: HardhatUserConfig = {
 				}
 			},
 			{
-				version: "0.8.14",
+				version: "0.8.16",
 				settings: {
 					optimizer: {
 						enabled: true,
-						runs: 500000
+						runs: 500000,
+						details: {
+							// Sometimes re-orders literals in commutative operations.
+							orderLiterals: true,
+							// Removes duplicate code blocks
+							deduplicate: true,
+							// Common subexpression elimination, this is the most complicated step but
+							// can also provide the largest gain.
+							cse: true,
+							// Optimize representation of literal numbers and strings in code.
+							constantOptimizer: true
+						}
 					}
 				}
 			}

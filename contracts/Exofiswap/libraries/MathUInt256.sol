@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-library Math
+library MathUInt256
 {
 	function min(uint256 a, uint256 b) internal pure returns(uint256)
 	{
@@ -17,7 +17,7 @@ library Math
 		}
 
 		// Set the initial guess to the least power of two that is greater than or equal to sqrt(x).
-		uint256 xAux = uint256(x);
+		uint256 xAux = x;
 		uint256 result = 1;
 		if (xAux >= 0x100000000000000000000000000000000)
 		{
@@ -66,6 +66,46 @@ library Math
 			result = (result + x / result) >> 1; // Seven iterations should be enough
 			uint256 roundedDownResult = x / result;
 			return result >= roundedDownResult ? roundedDownResult : result;
+		}
+	}
+
+	function unsafeDec(uint256 a) internal pure returns (uint256)
+	{
+		unchecked 
+		{
+			return a - 1;
+		}
+	}
+
+	function unsafeDiv(uint256 a, uint256 b) internal pure returns (uint256)
+	{
+		unchecked
+		{
+			return a / b;
+		}
+	}
+
+	function unsafeInc(uint256 a) internal pure returns (uint256)
+	{
+		unchecked 
+		{
+			return a + 1;
+		}
+	}
+
+	function unsafeMul(uint256 a, uint256 b) internal pure returns (uint256)
+	{
+		unchecked
+		{
+			return a * b;
+		}
+	}
+
+	function unsafeSub(uint256 a, uint256 b) internal pure returns (uint256)
+	{
+		unchecked
+		{
+			return a - b;
 		}
 	}
 }

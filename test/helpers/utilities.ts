@@ -1,9 +1,13 @@
 /* eslint-disable node/no-unpublished-import */
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract } from "ethers";
 import { defaultAbiCoder, getAddress, keccak256, solidityPack, toUtf8Bytes } from "ethers/lib/utils";
 import { getChainId } from "hardhat";
+import { ecsign } from "ethereumjs-util";
 
-const PERMIT_TYPEHASH = keccak256(toUtf8Bytes("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"));
+export const MINIMUM_LIQUIDITY = BigNumber.from(10).pow(3);
+
+export const PERMIT_TYPEHASH = keccak256(toUtf8Bytes("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"));
 
 export function ExpandTo18Decimals(n: number): BigNumber
 {
@@ -68,20 +72,18 @@ export async function GetApprovalDigest(
 {
 	const name = await token.name();
 	const DOMAIN_SEPARATOR = await GetDomainSeparator(name, token.address);
-	return keccak256(
-		solidityPack(
-			["bytes1", "bytes1", "bytes32", "bytes32"],
-			[
-				"0x19",
-				"0x01",
-				DOMAIN_SEPARATOR,
-				keccak256(
-					defaultAbiCoder.encode(
-						["bytes32", "address", "address", "uint256", "uint256", "uint256"],
-						[PERMIT_TYPEHASH, approve.owner, approve.spender, approve.value, nonce, deadline]
-					)
-				)
-			]
-		)
+	const dac = defaultAbiCoder.encode(
+		["bytes32", "address", "address", "uint256", "uint256", "uint256"],
+		[PERMIT_TYPEHASH, approve.owner, approve.spender, approve.value, nonce, deadline]
 	);
+	const pack = solidityPack(
+		["bytes1", "bytes1", "bytes32", "bytes32"],
+		[
+			"0x19",
+			"0x01",
+			DOMAIN_SEPARATOR,
+			keccak256(dac)
+		]
+	);
+	return keccak256(pack);
 }
