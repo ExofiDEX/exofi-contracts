@@ -4,39 +4,10 @@ pragma solidity ^0.8.0;
 import "@exoda/contracts/interfaces/token/ERC20/IERC20.sol";
 import "./IFermion.sol";
 import "./IMigratorDevice.sol";
-import "./IUniqueAddressList.sol";
+import "./IMagneticFieldGeneratorStore.sol";
 
 interface IMagneticFieldGenerator
 {
-	// Info of each pool.
-	struct PoolInfo
-	{
-		IERC20 lpToken; // Address of LP token contract.
-		uint256 allocPoint; // How many allocation points assigned to this pool. FMNs to distribute per block.
-		uint256 lastRewardBlock; // Last block number that FMNs distribution occurs.
-		uint256 accFermionPerShare; // Accumulated FMNs per share, times _ACC_FERMION_PRECISSION. See below.
-		uint256 initialLock; // Block until withdraw from the pool is not possible.
-		IUniqueAddressList participants; // Every address that participates in that pool.
-	}
-
-	// Info of each user.
-	struct UserInfo
-	{
-		uint256 amount; // How many LP tokens the user has provided.
-		int256 rewardDebt; // Reward debt. See explanation below.
-		//
-		// We do some fancy math here. Basically, any point in time, the amount of FMNs
-		// entitled to a user but is pending to be distributed is:
-		//
-		//   pending reward = (user.amount * pool.accFermionPerShare) - user.rewardDebt
-		//
-		// Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-		//   1. The pool's `accFermionPerShare` (and `lastRewardBlock`) gets updated.
-		//   2. User receives the pending reward sent to his/her address.
-		//   3. User's `amount` gets updated.
-		//   4. User's `rewardDebt` gets updated.
-	}
-
 	event Deposit(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 	event Harvest(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 	event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
@@ -62,6 +33,7 @@ interface IMagneticFieldGenerator
 	function set(uint256 pid, uint256 allocPoint) external;
 	function setFermionPerBlock(uint256 fermionPerBlock) external;
 	function setMigrator(IMigratorDevice migratorContract) external;
+	function setStore(IMagneticFieldGeneratorStore storeContract) external;
 	function transferOwnership(address newOwner) external;
 	function updatePool(uint256 pid) external returns(PoolInfo memory);
 	function withdraw(uint256 pid, uint256 amount, address to) external;

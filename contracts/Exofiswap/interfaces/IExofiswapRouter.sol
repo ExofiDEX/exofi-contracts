@@ -95,6 +95,28 @@ interface IExofiswapRouter {
 		bytes32 s
 	) external returns (uint256 amountA, uint256 amountB);
 
+	function swapETHForExactTokens(
+		uint256 amountOut,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external payable returns (uint256[] memory amounts);
+
+	function swapExactETHForTokens(
+		uint256 amountOutMin,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external payable returns (uint256[] memory amounts);
+
+	function swapExactTokensForETH(
+		uint256 amountIn,
+		uint256 amountOutMin,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external returns (uint256[] memory amounts);
+
 	function swapExactTokensForETHSupportingFeeOnTransferTokens(
 		uint256 amountIn,
 		uint256 amountOutMin,
@@ -119,6 +141,22 @@ interface IExofiswapRouter {
 		uint256 deadline
 	) external;
 
+	function swapTokensForExactETH(
+		uint256 amountOut,
+		uint256 amountInMax,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external returns (uint256[] memory amounts);
+
+	function swapTokensForExactTokens(
+		uint256 amountOut,
+		uint256 amountInMax,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external returns (uint256[] memory amounts);
+
 	function swapExactETHForTokensSupportingFeeOnTransferTokens(
 		uint256 amountOutMin,
 		IERC20Metadata[] calldata path,
@@ -126,7 +164,7 @@ interface IExofiswapRouter {
 		uint256 deadline
 	) external payable;
 
-	function factory() external view returns (IExofiswapFactory);
+		function factory() external view returns (IExofiswapFactory);
 
 	function getAmountsIn(uint256 amountOut, IERC20Metadata[] calldata path)
 		external
@@ -158,45 +196,3 @@ interface IExofiswapRouter {
 		uint256 reserve1
 	) external pure returns (uint256);
 }
-
-// function swapExactTokensForETH(
-	// 	uint256 amountIn,
-	// 	uint256 amountOutMin,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint256 deadline
-	// ) external returns (uint256[] memory amounts);
-
-
-
-
-
-// function swapTokensForExactETH(
-	// 	uint256 amountOut,
-	// 	uint256 amountInMax,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint256 deadline
-	// ) external returns (uint256[] memory amounts);
-
-	// function swapTokensForExactTokens(
-	// 	uint256 amountOut,
-	// 	uint256 amountInMax,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint256 deadline
-	// ) external returns (uint256[] memory amounts);
-
-	// function swapETHForExactTokens(
-	// 	uint256 amountOut,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint256 deadline
-	// ) external payable returns (uint256[] memory amounts);
-
-	// function swapExactETHForTokens(
-	// 	uint256 amountOutMin,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint256 deadline
-	// ) external payable returns (uint256[] memory amounts);

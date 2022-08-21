@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata.sol";
 import "./MathUInt256.sol";
-import "../ExofiswapPair.sol";
+import "../interfaces/IExofiswapPair.sol";
 
 library ExofiswapLibrary
 {
@@ -33,7 +33,8 @@ library ExofiswapLibrary
 	}
 
 	// performs chained getAmountOut calculations on any number of pairs
-	function getAmountsOut(IExofiswapFactory factory, uint256 amountIn, IERC20Metadata[] memory path) internal view returns (uint256[] memory amounts)
+	function getAmountsOut(IExofiswapFactory factory, uint256 amountIn, IERC20Metadata[] memory path)
+	internal view returns (uint256[] memory amounts)
 	{
 		require(path.length >= 2, "EL: INVALID_PATH");
 		amounts = new uint256[](path.length);
@@ -58,8 +59,15 @@ library ExofiswapLibrary
 
 	// calculates the CREATE2 address. It uses the factory for this since Factory already has the Pair contract included.
 	// Otherwise this library would add the size of the Pair Contract to every contract using this function.
-	function pairFor(IExofiswapFactory factory, IERC20Metadata token0, IERC20Metadata token1) internal view returns (IExofiswapPair) {
-		return factory.pairAddress(token0, token1);
+	function pairFor(IExofiswapFactory factory, IERC20Metadata token0, IERC20Metadata token1) internal pure returns (IExofiswapPair) {
+		
+		(IERC20Metadata tokenL, IERC20Metadata tokenR) = token0 < token1 ? (token0, token1) : (token1, token0);
+		return IExofiswapPair(address(uint160(uint256(keccak256(abi.encodePacked(
+				hex'ff', // CREATE2
+				address(factory), // sender
+				keccak256(abi.encodePacked(tokenL, tokenR)), // salt
+				hex'3a547d6893e3ea827cc055d253d297b5f0386ebdfaf0cf83bb6693857d2c6485' // init code hash keccak256(type(ExofiswapPair).creationCode);
+			))))));
 	}
 
 	// given an output amount of an asset and pair reserves, returns a required input amount of the other asset
@@ -79,7 +87,8 @@ library ExofiswapLibrary
 	function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) internal pure returns (uint256)
 	{
 		require(amountIn > 0, "EL: INSUFFICIENT_INPUT_AMOUNT");
-		require(reserveIn > 0 && reserveOut > 0, "EL: INSUFFICIENT_LIQUIDITY");
+		require(reserveIn > 0, "EL: INSUFFICIENT_LIQUIDITY");
+		require(reserveOut > 0, "EL: INSUFFICIENT_LIQUIDITY");
 		uint256 amountInWithFee = amountIn * 997;
 		uint256 numerator = amountInWithFee * reserveOut;
 		uint256 denominator = (reserveIn * 1000) + amountInWithFee;
@@ -90,7 +99,8 @@ library ExofiswapLibrary
 	// given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
 	function quote(uint256 amount, uint256 reserve0, uint256 reserve1) internal pure returns (uint256) {
 		require(amount > 0, "EL: INSUFFICIENT_AMOUNT");
-		require(reserve0 > 0 && reserve1 > 0, "EL: INSUFFICIENT_LIQUIDITY");
+		require(reserve0 > 0, "EL: INSUFFICIENT_LIQUIDITY");
+		require(reserve1 > 0, "EL: INSUFFICIENT_LIQUIDITY");
 		// Division with uint can not overflow.
 		return MathUInt256.unsafeDiv(amount * reserve1, reserve0);
 	}

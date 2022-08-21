@@ -84,8 +84,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		uint256 deadline
 	) external virtual override ensure(deadline) returns (uint256, uint256)
 	{
-		// Calling the factory is cheaper than calculating the address, and removeLiquidity can only be done on existing pairs.
-		IExofiswapPair pair = _swapFactory.getPair(tokenA, tokenB);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, tokenA, tokenB);
 		return _removeLiquidity(pair, tokenB < tokenA, liquidity, amountAMin, amountBMin, to);
 	}
 
@@ -98,7 +97,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		uint256 deadline
 	) external override virtual ensure(deadline) returns (uint256 amountToken, uint256 amountETH)
 	{
-		IExofiswapPair pair = _swapFactory.getPair(token, _wrappedEth);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, token, _wrappedEth);
 		(amountToken, amountETH) = _removeLiquidity(pair, _wrappedEth < token, liquidity, amountTokenMin, amountETHMin, address(this));
 		SafeERC20.safeTransfer(token, to, amountToken);
 		_wrappedEth.withdraw(amountETH);
@@ -114,8 +113,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		uint256 deadline
 	) override external virtual ensure(deadline) returns (uint256 amountETH)
 	{
-		// Calling the factory is cheaper than calculating the address, and removeLiquidity can only be done on existing pairs.
-		IExofiswapPair pair = _swapFactory.getPair(token, _wrappedEth);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, token, _wrappedEth);
 		(, amountETH) = _removeLiquidity(pair, _wrappedEth < token, liquidity, amountTokenMin, amountETHMin, address(this));
 		SafeERC20.safeTransfer(token, to, token.balanceOf(address(this)));
 		_wrappedEth.withdraw(amountETH);
@@ -130,9 +128,9 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		address to,
 		uint256 deadline,
 		bool approveMax, uint8 v, bytes32 r, bytes32 s
-	) external override virtual returns (uint amountToken, uint amountETH)
+	) external override virtual returns (uint256 amountToken, uint256 amountETH)
 	{
-		IExofiswapPair pair = _swapFactory.getPair(token, _wrappedEth);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, token, _wrappedEth);
 		{
 			uint256 value = approveMax ? type(uint256).max : liquidity;
 			pair.permit(_msgSender(), address(this), value, deadline, v, r, s); // ensure(deadline) happens here
@@ -156,10 +154,8 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		bytes32 s
 	) override external virtual returns (uint256 amountETH)
 	{
-		// Calling the factory is cheaper than calculating the address, and removeLiquidity can only be done on existing pairs.
-		// IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, address(token), address(_wrappedEth));
 		{
-			IExofiswapPair pair = _swapFactory.getPair(token, _wrappedEth);
+			IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, token, _wrappedEth);
 			uint256 value = approveMax ? type(uint256).max : liquidity;
 			pair.permit(_msgSender(), address(this), value, deadline, v, r, s); // ensure(deadline) happens here
 			(, amountETH) = _removeLiquidity(pair, _wrappedEth < token, liquidity, amountTokenMin, amountETHMin, address(this));
@@ -180,12 +176,26 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		bool approveMax, uint8 v, bytes32 r, bytes32 s
 	) external override virtual returns (uint256 amountA, uint256 amountB)
 	{
-		IExofiswapPair pair = _swapFactory.getPair(tokenA, tokenB);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, tokenA, tokenB);
 		{
 			uint256 value = approveMax ? type(uint256).max : liquidity;
 			pair.permit(_msgSender(), address(this), value, deadline, v, r, s); // ensure(deadline) happens here
 		}
 		(amountA, amountB) = _removeLiquidity(pair, tokenB < tokenA, liquidity, amountAMin, amountBMin, to);
+	}
+
+	function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, IERC20Metadata[] calldata path, address to, uint256 deadline)
+		override external virtual ensure(deadline) returns (uint256[] memory amounts)
+	{
+		uint256 lastItem = MathUInt256.unsafeDec(path.length);
+		require(path[lastItem] == _wrappedEth, "ER: INVALID_PATH"); // Overflow on lastItem will flail here to
+		amounts = ExofiswapLibrary.getAmountsOut(_swapFactory, amountIn, path);
+		require(amounts[amounts.length - 1] >= amountOutMin, "ER: INSUFFICIENT_OUTPUT_AMOUNT");
+		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]);
+		_swap(amounts, path, address(this));
+		// Lenght of amounts array must be equal to length of path array.
+		_wrappedEth.withdraw(amounts[lastItem]);
+		ExofiswapLibrary.safeTransferETH(to, amounts[lastItem]);
 	}
 
 	function swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -197,7 +207,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	) override external virtual ensure(deadline)
 	{
 		require(path[MathUInt256.unsafeDec(path.length)] == _wrappedEth, "ER: INVALID_PATH");
-		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(_swapFactory.getPair(path[0], path[1])), amountIn);
+		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amountIn);
 		_swapSupportingFeeOnTransferTokens(path, address(this));
 		uint256 amountOut = _wrappedEth.balanceOf(address(this));
 		require(amountOut >= amountOutMin, "ER: INSUFFICIENT_OUTPUT_AMOUNT");
@@ -215,7 +225,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	{
 		amounts = ExofiswapLibrary.getAmountsOut(_swapFactory, amountIn, path);
 		require(amounts[MathUInt256.unsafeDec(amounts.length)] >= amountOutMin, "ER: INSUFFICIENT_OUTPUT_AMOUNT");
-		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(_swapFactory.getPair(path[0], path[1])), amounts[0]);
+		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]);
 		_swap(amounts, path, to);
 	}
 
@@ -227,13 +237,67 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		uint256 deadline
 	) override external virtual ensure(deadline)
 	{
-		// Calling the factory is cheaper than calculating the address, and removeLiquidity can only be done on existing pairs.
-		// SafeERC20.safeTransferFrom(path[0], _msgSender(), ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1]), amountIn);
-		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(_swapFactory.getPair(path[0], path[1])), amountIn);
+		SafeERC20.safeTransferFrom(path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amountIn);
 		uint256 lastItem = MathUInt256.unsafeDec(path.length);
 		uint256 balanceBefore = path[lastItem].balanceOf(to);
 		_swapSupportingFeeOnTransferTokens(path, to);
 		require((path[lastItem].balanceOf(to) - balanceBefore) >= amountOutMin, "ER: INSUFFICIENT_OUTPUT_AMOUNT");
+	}
+
+	function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, IERC20Metadata[] calldata path, address to, uint256 deadline) override
+		external virtual ensure(deadline) returns (uint256[] memory amounts)
+	{
+		uint256 lastItem = MathUInt256.unsafeDec(path.length);
+		require(path[lastItem] == _wrappedEth, "ER: INVALID_PATH"); // Overflow on lastItem will fail here too
+		amounts = ExofiswapLibrary.getAmountsIn(_swapFactory, amountOut, path);
+		require(amounts[0] <= amountInMax, "ER: EXCESSIVE_INPUT_AMOUNT");
+		SafeERC20.safeTransferFrom(
+			path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]
+		);
+		_swap(amounts, path, address(this));
+		// amounts and path must have the same item count...
+		_wrappedEth.withdraw(amounts[lastItem]);
+		ExofiswapLibrary.safeTransferETH(to, amounts[lastItem]);
+	}
+
+	function swapTokensForExactTokens(
+		uint256 amountOut,
+		uint256 amountInMax,
+		IERC20Metadata[] calldata path,
+		address to,
+		uint256 deadline
+	) external override virtual ensure(deadline) returns (uint256[] memory amounts)
+	{
+		amounts = ExofiswapLibrary.getAmountsIn(_swapFactory, amountOut, path);
+		require(amounts[0] <= amountInMax, "ER: EXCESSIVE_INPUT_AMOUNT");
+		SafeERC20.safeTransferFrom(
+			path[0], _msgSender(), address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]
+		);
+		_swap(amounts, path, to);
+	}
+
+	function swapETHForExactTokens(uint256 amountOut, IERC20Metadata[] calldata path, address to, uint256 deadline)
+		override external virtual payable ensure(deadline) returns (uint256[] memory amounts)
+	{
+		require(path[0] == _wrappedEth, "ER: INVALID_PATH");
+		amounts = ExofiswapLibrary.getAmountsIn(_swapFactory, amountOut, path);
+		require(amounts[0] <= msg.value, "ER: EXCESSIVE_INPUT_AMOUNT");
+		_wrappedEth.deposit{value: amounts[0]}();
+		assert(_wrappedEth.transfer(address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]));
+		_swap(amounts, path, to);
+		// refund dust eth, if any
+		if (msg.value > amounts[0]) ExofiswapLibrary.safeTransferETH(_msgSender(), msg.value - amounts[0]);
+	}
+
+	function swapExactETHForTokens(uint256 amountOutMin, IERC20Metadata[] calldata path, address to, uint256 deadline)
+		override external virtual payable ensure(deadline) returns (uint[] memory amounts)
+	{
+		require(path[0] == _wrappedEth, "ER: INVALID_PATH");
+		amounts = ExofiswapLibrary.getAmountsOut(_swapFactory, msg.value, path);
+		require(amounts[MathUInt256.unsafeDec(amounts.length)] >= amountOutMin, "ER: INSUFFICIENT_OUTPUT_AMOUNT");
+		_wrappedEth.deposit{value: amounts[0]}();
+		assert(_wrappedEth.transfer(address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amounts[0]));
+		_swap(amounts, path, to);
 	}
 
 	function swapExactETHForTokensSupportingFeeOnTransferTokens(
@@ -246,7 +310,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		require(path[0] == _wrappedEth, "ER: INVALID_PATH");
 		uint256 amountIn = msg.value;
 		_wrappedEth.deposit{value: amountIn}();
-		assert(_wrappedEth.transfer(address(_swapFactory.getPair(path[0], path[1])), amountIn));
+		assert(_wrappedEth.transfer(address(ExofiswapLibrary.pairFor(_swapFactory, path[0], path[1])), amountIn));
 		uint256 lastItem = MathUInt256.unsafeDec(path.length);
 		uint256 balanceBefore = path[lastItem].balanceOf(to);
 		_swapSupportingFeeOnTransferTokens(path, to);
@@ -258,7 +322,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 		return _swapFactory;
 	}
 
-	function getAmountsIn(uint amountOut, IERC20Metadata[] memory path) override
+	function getAmountsIn(uint256 amountOut, IERC20Metadata[] memory path) override
 		public view virtual returns (uint[] memory amounts)
 	{
 		return ExofiswapLibrary.getAmountsIn(_swapFactory, amountOut, path);
@@ -277,7 +341,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	}
 
 	function getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut) override
-		public pure virtual returns (uint amountIn)
+		public pure virtual returns (uint256 amountIn)
 	{
 		return ExofiswapLibrary.getAmountIn(amountOut, reserveIn, reserveOut);
 	}
@@ -303,7 +367,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	) private returns (uint256, uint256, IExofiswapPair)
 	{
 		// create the pair if it doesn't exist yet
-		IExofiswapPair pair = _swapFactory.getPair(tokenA, tokenB);
+		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, tokenA, tokenB);
 		if (address(pair) == address(0))
 		{
 			pair = _swapFactory.createPair(tokenA, tokenB);
@@ -358,34 +422,38 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	// requires the initial amount to have already been sent to the first pair
 	function _swap(uint256[] memory amounts, IERC20Metadata[] memory path, address to) private
 	{
-		uint256 pathLengthSubOne = MathUInt256.unsafeDec(path.length);
-		uint256 pathLengthSubTwo = MathUInt256.unsafeDec(pathLengthSubOne);
+		// TODO: Optimize for Gas. Still higher than Uniswap....maybe get all pairs from factory at once helps....
+		uint256 pathLengthSubTwo = MathUInt256.unsafeSub(path.length, 2);
 		uint256 j;
-		for (uint256 i; i < pathLengthSubOne; i = j)
+		uint256 i;
+		while (i < pathLengthSubTwo)
 		{
 			j = MathUInt256.unsafeInc(i);
-			IExofiswapPair pair = _swapFactory.getPair(path[i], path[j]);
-			uint256 amountOut = amounts[j];
-			(uint256 amount0Out, uint256 amount1Out) = path[i] == pair.token0() ? (uint256(0), amountOut) : (amountOut, uint256(0));
-			address target = i < pathLengthSubTwo ? address(ExofiswapLibrary.pairFor(_swapFactory, path[j], path[MathUInt256.unsafeInc(j)])) : to;
-			pair.swap(amount0Out, amount1Out, target, new bytes(0));
+			IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, path[i], path[j]);
+			(uint256 amount0Out, uint256 amount1Out) = path[i] == pair.token0() ? (uint256(0), amounts[j]) : (amounts[j], uint256(0));
+			pair.swap(amount0Out, amount1Out, address(ExofiswapLibrary.pairFor(_swapFactory, path[j], path[MathUInt256.unsafeInc(j)])), new bytes(0));
+			i = j;
 		}
+		j = MathUInt256.unsafeInc(i);
+		IExofiswapPair pair2 = ExofiswapLibrary.pairFor(_swapFactory, path[i], path[j]);
+		(uint256 amount0Out2, uint256 amount1Out2) = path[i] == pair2.token0() ? (uint256(0), amounts[j]) : (amounts[j], uint256(0));
+		pair2.swap(amount0Out2, amount1Out2, to, new bytes(0));
 	}
 
 	function _swapSupportingFeeOnTransferTokens(IERC20Metadata[] memory path, address to) private
 	{
-		uint256 pathLengthSubOne = MathUInt256.unsafeDec(path.length);
-		uint256 pathLengthSubTwo = MathUInt256.unsafeDec(pathLengthSubOne);
+		uint256 pathLengthSubTwo = MathUInt256.unsafeSub(path.length, 2);
 		uint256 j;
-		for (uint256 i; i < pathLengthSubOne; i = j)
+		uint256 i;
+		while (i < pathLengthSubTwo)
 		{
 			j = MathUInt256.unsafeInc(i);
-			IExofiswapPair pair = _swapFactory.getPair(path[i], path[j]);
+			IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, path[i], path[j]);
 			uint256 amountInput;
 			uint256 amountOutput;
 			IERC20Metadata token0 = pair.token0();
 			{ // scope to avoid stack too deep errors
-				(uint256 reserveInput, uint reserveOutput,) = pair.getReserves();
+				(uint256 reserveInput, uint256 reserveOutput,) = pair.getReserves();
 				if (path[j] == token0)
 				{
 					(reserveInput, reserveOutput) = (reserveOutput, reserveInput);
@@ -394,115 +462,25 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 				amountOutput = ExofiswapLibrary.getAmountOut(amountInput, reserveInput, reserveOutput);
 			}
 			(uint256 amount0Out, uint256 amount1Out) = path[i] == token0 ? (uint256(0), amountOutput) : (amountOutput, uint256(0));
-			address receiver = i < pathLengthSubTwo ? address(_swapFactory.getPair(path[j], path[MathUInt256.unsafeInc(j)])): to;
+			address receiver = address(ExofiswapLibrary.pairFor(_swapFactory, path[j], path[MathUInt256.unsafeInc(j)]));
 			pair.swap(amount0Out, amount1Out, receiver, new bytes(0));
+			i = j;
 		}
+		j = MathUInt256.unsafeInc(i);
+		IExofiswapPair pair2 = ExofiswapLibrary.pairFor(_swapFactory, path[i], path[j]);
+		uint256 amountInput2;
+		uint256 amountOutput2;
+		IERC20Metadata token02 = pair2.token0();
+		{ // scope to avoid stack too deep errors
+			(uint256 reserveInput, uint256 reserveOutput,) = pair2.getReserves();
+			if (path[j] == token02)
+			{
+				(reserveInput, reserveOutput) = (reserveOutput, reserveInput);
+			}
+			amountInput2 = (path[i].balanceOf(address(pair2)) - reserveInput);
+			amountOutput2 = ExofiswapLibrary.getAmountOut(amountInput2, reserveInput, reserveOutput);
+		}
+		(uint256 amount0Out2, uint256 amount1Out2) = path[i] == token02? (uint256(0), amountOutput2) : (amountOutput2, uint256(0));
+		pair2.swap(amount0Out2, amount1Out2, to, new bytes(0));
 	}
 }
-
-	// // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
-
-	// // **** SWAP ****
-
-	
-	// function swapTokensForExactTokens(
-	// 	uint amountOut,
-	// 	uint amountInMax,
-	// 	address[] calldata path,
-	// 	address to,
-	// 	uint deadline
-	// ) external virtual override ensure(deadline) returns (uint[] memory amounts) {
-	// 	amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
-	// 	require(amounts[0] <= amountInMax, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
-	// 	TransferHelper.safeTransferFrom(
-	// 		path[0], _msgSender(), UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
-	// 	);
-	// 	_swap(amounts, path, to);
-	// }
-	// function swapExactETHForTokens(uint amountOutMin, address[] calldata path, address to, uint deadline)
-	// 	external
-	// 	virtual
-	// 	override
-	// 	payable
-	// 	ensure(deadline)
-	// 	returns (uint[] memory amounts)
-	// {
-	// 	require(path[0] == WETH, 'UniswapV2Router: INVALID_PATH');
-	// 	amounts = UniswapV2Library.getAmountsOut(factory, msg.value, path);
-	// 	require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
-	// 	IWETH(WETH).deposit{value: amounts[0]}();
-	// 	assert(IWETH(WETH).transfer(UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]));
-	// 	_swap(amounts, path, to);
-	// }
-	// function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
-	// 	external
-	// 	virtual
-	// 	override
-	// 	ensure(deadline)
-	// 	returns (uint[] memory amounts)
-	// {
-	// 	require(path[path.length - 1] == WETH, 'UniswapV2Router: INVALID_PATH');
-	// 	amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
-	// 	require(amounts[0] <= amountInMax, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
-	// 	TransferHelper.safeTransferFrom(
-	// 		path[0], _msgSender(), UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
-	// 	);
-	// 	_swap(amounts, path, address(this));
-	// 	IWETH(WETH).withdraw(amounts[amounts.length - 1]);
-	// 	TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
-	// }
-	// function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-	// 	external
-	// 	virtual
-	// 	override
-	// 	ensure(deadline)
-	// 	returns (uint[] memory amounts)
-	// {
-	// 	require(path[path.length - 1] == WETH, 'UniswapV2Router: INVALID_PATH');
-	// 	amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
-	// 	require(amounts[amounts.length - 1] >= amountOutMin, 'UniswapV2Router: INSUFFICIENT_OUTPUT_AMOUNT');
-	// 	TransferHelper.safeTransferFrom(
-	// 		path[0], _msgSender(), UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]
-	// 	);
-	// 	_swap(amounts, path, address(this));
-	// 	IWETH(WETH).withdraw(amounts[amounts.length - 1]);
-	// 	TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
-	// }
-	// function swapETHForExactTokens(uint amountOut, address[] calldata path, address to, uint deadline)
-	// 	external
-	// 	virtual
-	// 	override
-	// 	payable
-	// 	ensure(deadline)
-	// 	returns (uint[] memory amounts)
-	// {
-	// 	require(path[0] == WETH, 'UniswapV2Router: INVALID_PATH');
-	// 	amounts = UniswapV2Library.getAmountsIn(factory, amountOut, path);
-	// 	require(amounts[0] <= msg.value, 'UniswapV2Router: EXCESSIVE_INPUT_AMOUNT');
-	// 	IWETH(WETH).deposit{value: amounts[0]}();
-	// 	assert(IWETH(WETH).transfer(UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]));
-	// 	_swap(amounts, path, to);
-	// 	// refund dust eth, if any
-	// 	if (msg.value > amounts[0]) TransferHelper.safeTransferETH(_msgSender(), msg.value - amounts[0]);
-	// }
-
-	// // **** SWAP (supporting fee-on-transfer tokens) ****
-	// // requires the initial amount to have already been sent to the first pair
-	// function _swapSupportingFeeOnTransferTokens(address[] memory path, address _to) internal virtual {
-	// 	for (uint i; i < path.length - 1; i++) {
-	// 		(address input, address output) = (path[i], path[i + 1]);
-	// 		(address token0,) = UniswapV2Library.sortTokens(input, output);
-	// 		IUniswapV2Pair pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output));
-	// 		uint amountInput;
-	// 		uint amountOutput;
-	// 		{ // scope to avoid stack too deep errors
-	// 		(uint reserve0, uint reserve1,) = pair.getReserves();
-	// 		(uint reserveInput, uint reserveOutput) = input == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
-	// 		amountInput = IERC20Uniswap(input).balanceOf(address(pair)).sub(reserveInput);
-	// 		amountOutput = UniswapV2Library.getAmountOut(amountInput, reserveInput, reserveOutput);
-	// 		}
-	// 		(uint amount0Out, uint amount1Out) = input == token0 ? (uint(0), amountOutput) : (amountOutput, uint(0));
-	// 		address to = i < path.length - 2 ? UniswapV2Library.pairFor(factory, output, path[i + 2]) : _to;
-	// 		pair.swap(amount0Out, amount1Out, to, new bytes(0));
-	// 	}
-	// }

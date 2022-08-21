@@ -5,7 +5,7 @@ import { BigNumber, Contract } from "ethers";
 
 import { IERC20Metadata, IExofiswapFactory, IExofiswapPair, IExofiswapRouter } from "../../typechain-types";
 import { Fixture } from "../helpers/fixtures";
-import { ADDRESS_ZERO, ExpandTo18Decimals, GetApprovalDigest, MAX_UINT256, MINIMUM_LIQUIDITY } from "../helpers";
+import { ADDRESS_ZERO, AdvanceBlock, ExpandTo18Decimals, GetApprovalDigest, MAX_UINT256, MINIMUM_LIQUIDITY } from "../helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // import { keccak256 } from "ethereumjs-util";
 import { ecsign } from "ethereumjs-util";
@@ -1160,6 +1160,719 @@ describe("ExofiswapRouter", () =>
 				)
 					.to.emit(routerEventEmitter, "Amounts")
 					.withArgs([swapAmount, expectedOutputAmount]);
+			});
+		});
+
+		describe("uni swapExactETHForTokens", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(10);
+			const ETHAmount = ExpandTo18Decimals(5);
+			const swapAmount = ExpandTo18Decimals(1);
+			const expectedOutputAmount = BigNumber.from("1662497915624478906");
+
+			beforeEach(async () =>
+			{
+				await uniWETHPartner.transfer(uniWETHPair.address, WETHPartnerAmount);
+
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(uniWETHPair.address, ETHAmount);
+
+				await uniWETHPair.mint(WalletSigner.address);
+				await uniMockToken0.approve(uniRouter.address, MAX_UINT256);
+			});
+
+			it("happy path", async () =>
+			{
+				const uniWETHPairToken0 = await uniWETHPair.token0();
+				await expect(
+					uniRouter.swapExactETHForTokens(0, [WETH.address, uniWETHPartner.address], WalletSigner.address, MAX_UINT256, {
+						value: swapAmount
+					})
+				)
+					.to.emit(WETH, "Transfer")
+					.withArgs(uniRouter.address, uniWETHPair.address, swapAmount)
+					.to.emit(uniWETHPartner, "Transfer")
+					.withArgs(uniWETHPair.address, WalletSigner.address, expectedOutputAmount)
+					.to.emit(uniWETHPair, "Sync")
+					.withArgs(
+						uniWETHPairToken0 === uniWETHPartner.address
+							? WETHPartnerAmount.sub(expectedOutputAmount)
+							: ETHAmount.add(swapAmount),
+						uniWETHPairToken0 === uniWETHPartner.address
+							? ETHAmount.add(swapAmount)
+							: WETHPartnerAmount.sub(expectedOutputAmount)
+					)
+					.to.emit(uniWETHPair, "Swap")
+					.withArgs(
+						uniRouter.address,
+						uniWETHPairToken0 === uniWETHPartner.address ? 0 : swapAmount,
+						uniWETHPairToken0 === uniWETHPartner.address ? swapAmount : 0,
+						uniWETHPairToken0 === uniWETHPartner.address ? expectedOutputAmount : 0,
+						uniWETHPairToken0 === uniWETHPartner.address ? 0 : expectedOutputAmount,
+						WalletSigner.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await expect(
+					routerEventEmitter.swapExactETHForTokens(
+						uniRouter.address,
+						0,
+						[WETH.address, uniWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: swapAmount
+						}
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([swapAmount, expectedOutputAmount]);
+			});
+
+			it("uni gas", async () =>
+			{
+				const WETHPartnerAmount = ExpandTo18Decimals(10);
+				const ETHAmount = ExpandTo18Decimals(5);
+				await uniWETHPartner.transfer(uniWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(uniWETHPair.address, ETHAmount);
+				await uniWETHPair.mint(WalletSigner.address);
+
+				// ensure that setting price{0,1}CumulativeLast for the first time doesn't affect our gas math
+				await AdvanceBlock();
+				await uniPair.sync();
+
+				const swapAmount = ExpandTo18Decimals(1);
+				await AdvanceBlock();
+				const tx = await uniRouter.swapExactETHForTokens(
+					0,
+					[WETH.address, uniWETHPartner.address],
+					WalletSigner.address,
+					MAX_UINT256,
+					{
+						value: swapAmount
+					}
+				);
+				const receipt = await tx.wait();
+				expect(receipt.gasUsed).to.eq(101159);
+			}).retries(3);
+		});
+
+		describe("exo swapExactETHForTokens", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(10);
+			const ETHAmount = ExpandTo18Decimals(5);
+			const swapAmount = ExpandTo18Decimals(1);
+			const expectedOutputAmount = BigNumber.from("1662497915624478906");
+
+			beforeEach(async () =>
+			{
+				await exoWETHPartner.transfer(exoWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(exoWETHPair.address, ETHAmount);
+
+				await exoWETHPair.mint(WalletSigner.address);
+				await exoMockToken0.approve(exoRouter.address, MAX_UINT256);
+			});
+
+			it("happy path", async () =>
+			{
+				const exoWETHPairToken0 = await exoWETHPair.token0();
+				await expect(
+					exoRouter.swapExactETHForTokens(
+						0, [WETH.address, exoWETHPartner.address], WalletSigner.address, MAX_UINT256,
+						{ value: swapAmount })
+				)
+					.to.emit(WETH, "Transfer")
+					.withArgs(exoRouter.address, exoWETHPair.address, swapAmount)
+					.to.emit(exoWETHPartner, "Transfer")
+					.withArgs(exoWETHPair.address, WalletSigner.address, expectedOutputAmount)
+					.to.emit(exoWETHPair, "Sync")
+					.withArgs(
+						exoWETHPairToken0 === exoWETHPartner.address
+							? WETHPartnerAmount.sub(expectedOutputAmount)
+							: ETHAmount.add(swapAmount),
+						exoWETHPairToken0 === exoWETHPartner.address
+							? ETHAmount.add(swapAmount)
+							: WETHPartnerAmount.sub(expectedOutputAmount)
+					)
+					.to.emit(exoWETHPair, "Swap")
+					.withArgs(
+						exoRouter.address,
+						exoWETHPairToken0 === exoWETHPartner.address ? 0 : swapAmount,
+						exoWETHPairToken0 === exoWETHPartner.address ? swapAmount : 0,
+						exoWETHPairToken0 === exoWETHPartner.address ? expectedOutputAmount : 0,
+						exoWETHPairToken0 === exoWETHPartner.address ? 0 : expectedOutputAmount,
+						WalletSigner.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await expect(
+					routerEventEmitter.swapExactETHForTokens(
+						exoRouter.address,
+						0,
+						[WETH.address, exoWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: swapAmount
+						}
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([swapAmount, expectedOutputAmount]);
+			});
+
+			it("exo gas", async () =>
+			{
+				const WETHPartnerAmount = ExpandTo18Decimals(10);
+				const ETHAmount = ExpandTo18Decimals(5);
+				await exoWETHPartner.transfer(exoWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(exoWETHPair.address, ETHAmount);
+				await exoWETHPair.mint(WalletSigner.address);
+
+				// ensure that setting price{0,1}CumulativeLast for the first time doesn't affect our gas math
+				await AdvanceBlock();
+				await exoPair.sync();
+
+				const swapAmount = ExpandTo18Decimals(1);
+				await AdvanceBlock();
+				const tx = await exoRouter.swapExactETHForTokens(
+					0,
+					[WETH.address, exoWETHPartner.address],
+					WalletSigner.address,
+					MAX_UINT256,
+					{
+						value: swapAmount
+					}
+				);
+				const receipt = await tx.wait();
+				expect(receipt.gasUsed).to.eq(102721);
+			}).retries(3);
+		});
+
+		describe("uni swapTokensForExactETH", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(5);
+			const ETHAmount = ExpandTo18Decimals(10);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await uniWETHPartner.transfer(uniWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(uniWETHPair.address, ETHAmount);
+				await uniWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				await uniWETHPartner.approve(uniRouter.address, MAX_UINT256);
+				const WETHPairToken0 = await uniWETHPair.token0();
+				await expect(
+					uniRouter.swapTokensForExactETH(
+						outputAmount,
+						MAX_UINT256,
+						[uniWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(uniWETHPartner, "Transfer")
+					.withArgs(WalletSigner.address, uniWETHPair.address, expectedSwapAmount)
+					.to.emit(WETH, "Transfer")
+					.withArgs(uniWETHPair.address, uniRouter.address, outputAmount)
+					.to.emit(uniWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === uniWETHPair.address ? WETHPartnerAmount.add(expectedSwapAmount) : ETHAmount.sub(outputAmount),
+						WETHPairToken0 === uniWETHPair.address ? ETHAmount.sub(outputAmount) : WETHPartnerAmount.add(expectedSwapAmount)
+					)
+					.to.emit(uniWETHPair, "Swap")
+					.withArgs(
+						uniRouter.address,
+						WETHPairToken0 === uniWETHPartner.address ? expectedSwapAmount : 0,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : expectedSwapAmount,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : outputAmount,
+						WETHPairToken0 === uniWETHPartner.address ? outputAmount : 0,
+						uniRouter.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await uniWETHPartner.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapTokensForExactETH(
+						uniRouter.address,
+						outputAmount,
+						MAX_UINT256,
+						[uniWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
+			});
+		});
+
+		describe("exo swapTokensForExactETH", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(5);
+			const ETHAmount = ExpandTo18Decimals(10);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await exoWETHPartner.transfer(exoWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(exoWETHPair.address, ETHAmount);
+				await exoWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				await exoWETHPartner.approve(exoRouter.address, MAX_UINT256);
+				const WETHPairToken0 = await exoWETHPair.token0();
+				await expect(
+					exoRouter.swapTokensForExactETH(
+						outputAmount,
+						MAX_UINT256,
+						[exoWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(exoWETHPartner, "Transfer")
+					.withArgs(WalletSigner.address, exoWETHPair.address, expectedSwapAmount)
+					.to.emit(WETH, "Transfer")
+					.withArgs(exoWETHPair.address, exoRouter.address, outputAmount)
+					.to.emit(exoWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === exoWETHPair.address ? WETHPartnerAmount.add(expectedSwapAmount) : ETHAmount.sub(outputAmount),
+						WETHPairToken0 === exoWETHPair.address ? ETHAmount.sub(outputAmount) : WETHPartnerAmount.add(expectedSwapAmount)
+					)
+					.to.emit(exoWETHPair, "Swap")
+					.withArgs(
+						exoRouter.address,
+						WETHPairToken0 === exoWETHPartner.address ? expectedSwapAmount : 0,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : expectedSwapAmount,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : outputAmount,
+						WETHPairToken0 === exoWETHPartner.address ? outputAmount : 0,
+						exoRouter.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await exoWETHPartner.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapTokensForExactETH(
+						exoRouter.address,
+						outputAmount,
+						MAX_UINT256,
+						[exoWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
+			});
+		});
+
+		describe("uni swapExactTokensForETH", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(5);
+			const ETHAmount = ExpandTo18Decimals(10);
+			const swapAmount = ExpandTo18Decimals(1);
+			const expectedOutputAmount = BigNumber.from("1662497915624478906");
+
+			beforeEach(async () =>
+			{
+				await uniWETHPartner.transfer(uniWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(uniWETHPair.address, ETHAmount);
+				await uniWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				await uniWETHPartner.approve(uniRouter.address, MAX_UINT256);
+				const WETHPairToken0 = await uniWETHPair.token0();
+				await expect(
+					uniRouter.swapExactTokensForETH(
+						swapAmount,
+						0,
+						[uniWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(uniWETHPartner, "Transfer")
+					.withArgs(WalletSigner.address, uniWETHPair.address, swapAmount)
+					.to.emit(WETH, "Transfer")
+					.withArgs(uniWETHPair.address, uniRouter.address, expectedOutputAmount)
+					.to.emit(uniWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === uniWETHPartner.address
+							? WETHPartnerAmount.add(swapAmount)
+							: ETHAmount.sub(expectedOutputAmount),
+						WETHPairToken0 === uniWETHPartner.address
+							? ETHAmount.sub(expectedOutputAmount)
+							: WETHPartnerAmount.add(swapAmount)
+					)
+					.to.emit(uniWETHPair, "Swap")
+					.withArgs(
+						uniRouter.address,
+						WETHPairToken0 === uniWETHPartner.address ? swapAmount : 0,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : swapAmount,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : expectedOutputAmount,
+						WETHPairToken0 === uniWETHPartner.address ? expectedOutputAmount : 0,
+						uniRouter.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await uniWETHPartner.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapExactTokensForETH(
+						uniRouter.address,
+						swapAmount,
+						0,
+						[uniWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([swapAmount, expectedOutputAmount]);
+			});
+		});
+
+		describe("exo swapExactTokensForETH", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(5);
+			const ETHAmount = ExpandTo18Decimals(10);
+			const swapAmount = ExpandTo18Decimals(1);
+			const expectedOutputAmount = BigNumber.from("1662497915624478906");
+
+			beforeEach(async () =>
+			{
+				await exoWETHPartner.transfer(exoWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(exoWETHPair.address, ETHAmount);
+				await exoWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				await exoWETHPartner.approve(exoRouter.address, MAX_UINT256);
+				const WETHPairToken0 = await exoWETHPair.token0();
+				await expect(
+					exoRouter.swapExactTokensForETH(
+						swapAmount,
+						0,
+						[exoWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(exoWETHPartner, "Transfer")
+					.withArgs(WalletSigner.address, exoWETHPair.address, swapAmount)
+					.to.emit(WETH, "Transfer")
+					.withArgs(exoWETHPair.address, exoRouter.address, expectedOutputAmount)
+					.to.emit(exoWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === exoWETHPartner.address
+							? WETHPartnerAmount.add(swapAmount)
+							: ETHAmount.sub(expectedOutputAmount),
+						WETHPairToken0 === exoWETHPartner.address
+							? ETHAmount.sub(expectedOutputAmount)
+							: WETHPartnerAmount.add(swapAmount)
+					)
+					.to.emit(exoWETHPair, "Swap")
+					.withArgs(
+						exoRouter.address,
+						WETHPairToken0 === exoWETHPartner.address ? swapAmount : 0,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : swapAmount,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : expectedOutputAmount,
+						WETHPairToken0 === exoWETHPartner.address ? expectedOutputAmount : 0,
+						exoRouter.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await exoWETHPartner.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapExactTokensForETH(
+						exoRouter.address,
+						swapAmount,
+						0,
+						[exoWETHPartner.address, WETH.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([swapAmount, expectedOutputAmount]);
+			});
+		});
+
+		describe("uni swapETHForExactTokens", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(10);
+			const ETHAmount = ExpandTo18Decimals(5);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await uniWETHPartner.transfer(uniWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(uniWETHPair.address, ETHAmount);
+				await uniWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				const WETHPairToken0 = await uniWETHPair.token0();
+				await expect(
+					uniRouter.swapETHForExactTokens(
+						outputAmount,
+						[WETH.address, uniWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: expectedSwapAmount
+						}
+					)
+				)
+					.to.emit(WETH, "Transfer")
+					.withArgs(uniRouter.address, uniWETHPair.address, expectedSwapAmount)
+					.to.emit(uniWETHPartner, "Transfer")
+					.withArgs(uniWETHPair.address, WalletSigner.address, outputAmount)
+					.to.emit(uniWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === uniWETHPartner.address
+							? WETHPartnerAmount.sub(outputAmount)
+							: ETHAmount.add(expectedSwapAmount),
+						WETHPairToken0 === uniWETHPartner.address
+							? ETHAmount.add(expectedSwapAmount)
+							: WETHPartnerAmount.sub(outputAmount)
+					)
+					.to.emit(uniWETHPair, "Swap")
+					.withArgs(
+						uniRouter.address,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : expectedSwapAmount,
+						WETHPairToken0 === uniWETHPartner.address ? expectedSwapAmount : 0,
+						WETHPairToken0 === uniWETHPartner.address ? outputAmount : 0,
+						WETHPairToken0 === uniWETHPartner.address ? 0 : outputAmount,
+						WalletSigner.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await expect(
+					routerEventEmitter.swapETHForExactTokens(
+						uniRouter.address,
+						outputAmount,
+						[WETH.address, uniWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: expectedSwapAmount
+						}
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
+			});
+		});
+
+		describe("exo swapETHForExactTokens", () =>
+		{
+			const WETHPartnerAmount = ExpandTo18Decimals(10);
+			const ETHAmount = ExpandTo18Decimals(5);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await exoWETHPartner.transfer(exoWETHPair.address, WETHPartnerAmount);
+				await WETH.deposit({ value: ETHAmount });
+				await WETH.transfer(exoWETHPair.address, ETHAmount);
+				await exoWETHPair.mint(WalletSigner.address);
+			});
+
+			it("happy path", async () =>
+			{
+				const WETHPairToken0 = await exoWETHPair.token0();
+				await expect(
+					exoRouter.swapETHForExactTokens(
+						outputAmount,
+						[WETH.address, exoWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: expectedSwapAmount
+						}
+					)
+				)
+					.to.emit(WETH, "Transfer")
+					.withArgs(exoRouter.address, exoWETHPair.address, expectedSwapAmount)
+					.to.emit(exoWETHPartner, "Transfer")
+					.withArgs(exoWETHPair.address, WalletSigner.address, outputAmount)
+					.to.emit(exoWETHPair, "Sync")
+					.withArgs(
+						WETHPairToken0 === exoWETHPartner.address
+							? WETHPartnerAmount.sub(outputAmount)
+							: ETHAmount.add(expectedSwapAmount),
+						WETHPairToken0 === exoWETHPartner.address
+							? ETHAmount.add(expectedSwapAmount)
+							: WETHPartnerAmount.sub(outputAmount)
+					)
+					.to.emit(exoWETHPair, "Swap")
+					.withArgs(
+						exoRouter.address,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : expectedSwapAmount,
+						WETHPairToken0 === exoWETHPartner.address ? expectedSwapAmount : 0,
+						WETHPairToken0 === exoWETHPartner.address ? outputAmount : 0,
+						WETHPairToken0 === exoWETHPartner.address ? 0 : outputAmount,
+						WalletSigner.address
+					);
+			});
+
+			it("amounts", async () =>
+			{
+				await expect(
+					routerEventEmitter.swapETHForExactTokens(
+						exoRouter.address,
+						outputAmount,
+						[WETH.address, exoWETHPartner.address],
+						WalletSigner.address,
+						MAX_UINT256,
+						{
+							value: expectedSwapAmount
+						}
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
+			});
+		});
+
+		describe("uni swapTokensForExactTokens", () =>
+		{
+			const token0Amount = ExpandTo18Decimals(5);
+			const token1Amount = ExpandTo18Decimals(10);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await addLiquidity(token0Amount, token1Amount);
+			});
+
+			it("happy path", async () =>
+			{
+				await uniMockToken0.approve(uniRouter.address, MAX_UINT256);
+				await expect(
+					uniRouter.swapTokensForExactTokens(
+						outputAmount,
+						MAX_UINT256,
+						[uniMockToken0.address, uniMockToken1.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(uniMockToken0, "Transfer")
+					.withArgs(WalletSigner.address, uniPair.address, expectedSwapAmount)
+					.to.emit(uniMockToken1, "Transfer")
+					.withArgs(uniPair.address, WalletSigner.address, outputAmount)
+					.to.emit(uniPair, "Sync")
+					.withArgs(token0Amount.add(expectedSwapAmount), token1Amount.sub(outputAmount))
+					.to.emit(uniPair, "Swap")
+					.withArgs(uniRouter.address, expectedSwapAmount, 0, 0, outputAmount, WalletSigner.address);
+			});
+
+			it("amounts", async () =>
+			{
+				await uniMockToken0.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapTokensForExactTokens(
+						uniRouter.address,
+						outputAmount,
+						MAX_UINT256,
+						[uniMockToken0.address, uniMockToken1.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
+			});
+		});
+
+		describe("exo swapTokensForExactTokens", () =>
+		{
+			const token0Amount = ExpandTo18Decimals(5);
+			const token1Amount = ExpandTo18Decimals(10);
+			const expectedSwapAmount = BigNumber.from("557227237267357629");
+			const outputAmount = ExpandTo18Decimals(1);
+
+			beforeEach(async () =>
+			{
+				await addLiquidity(token0Amount, token1Amount);
+			});
+
+			it("happy path", async () =>
+			{
+				await exoMockToken0.approve(exoRouter.address, MAX_UINT256);
+				await expect(
+					exoRouter.swapTokensForExactTokens(
+						outputAmount,
+						MAX_UINT256,
+						[exoMockToken0.address, exoMockToken1.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(exoMockToken0, "Transfer")
+					.withArgs(WalletSigner.address, exoPair.address, expectedSwapAmount)
+					.to.emit(exoMockToken1, "Transfer")
+					.withArgs(exoPair.address, WalletSigner.address, outputAmount)
+					.to.emit(exoPair, "Sync")
+					.withArgs(token0Amount.add(expectedSwapAmount), token1Amount.sub(outputAmount))
+					.to.emit(exoPair, "Swap")
+					.withArgs(exoRouter.address, expectedSwapAmount, 0, 0, outputAmount, WalletSigner.address);
+			});
+
+			it("amounts", async () =>
+			{
+				await exoMockToken0.approve(routerEventEmitter.address, MAX_UINT256);
+				await expect(
+					routerEventEmitter.swapTokensForExactTokens(
+						exoRouter.address,
+						outputAmount,
+						MAX_UINT256,
+						[exoMockToken0.address, exoMockToken1.address],
+						WalletSigner.address,
+						MAX_UINT256
+					)
+				)
+					.to.emit(routerEventEmitter, "Amounts")
+					.withArgs([expectedSwapAmount, outputAmount]);
 			});
 		});
 	});

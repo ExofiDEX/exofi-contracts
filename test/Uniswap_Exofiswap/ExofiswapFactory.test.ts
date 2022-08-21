@@ -4,8 +4,9 @@ import { expect } from "chai";
 import { BigNumber, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { ADDRESS_ZERO, ExpandTo18Decimals, GetCreate2Address, UniGetCreate2Address } from "../helpers";
+import { ADDRESS_ZERO, ExpandTo18Decimals, GetCreate2Address } from "../helpers";
 import { ExofiswapPair, IERC20, IExofiswapFactory, UniswapV2Factory, UniswapV2Pair } from "../../typechain-types";
+import { Console } from "console";
 
 describe("ExofiswapFactory", () =>
 {
@@ -94,7 +95,7 @@ describe("ExofiswapFactory", () =>
 			const uniBytecode = UniContractFactory.bytecode;
 			const exoBytecode = ExoContractFactory.bytecode;
 
-			const uniCreate2Address = UniGetCreate2Address(UniswapV2Factory.address, uniTokens, uniBytecode);
+			const uniCreate2Address = GetCreate2Address(UniswapV2Factory.address, uniTokens, uniBytecode);
 			const exoCreate2Address = GetCreate2Address(ExofiswapFactory.address, exoTokens, exoBytecode);
 
 			await expect(UniswapV2Factory.createPair(...uniTokens))
@@ -125,10 +126,16 @@ describe("ExofiswapFactory", () =>
 			expect(await uniPair.token0()).to.eq(UNI_TEST_ADDRESSES[0]);
 			expect(await uniPair.token1()).to.eq(UNI_TEST_ADDRESSES[1]);
 
+			const UniswapPairFactory: ContractFactory = await ethers.getContractFactory("UniswapV2Pair");
+			expect(uniCreate2Address).to.equal(GetCreate2Address(UniswapV2Factory.address, UNI_TEST_ADDRESSES, UniswapPairFactory.bytecode));
+
 			const exoPair = await ethers.getContractAt("ExofiswapPair", exoCreate2Address) as ExofiswapPair;
 			expect(await exoPair.factory()).to.eq(ExofiswapFactory.address);
 			expect(await exoPair.token0()).to.eq(EXO_TEST_ADDRESSES[0]);
 			expect(await exoPair.token1()).to.eq(EXO_TEST_ADDRESSES[1]);
+
+			const ExofiswapPairFactory: ContractFactory = await ethers.getContractFactory("ExofiswapPair");
+			expect(exoCreate2Address).to.equal(GetCreate2Address(ExofiswapFactory.address, EXO_TEST_ADDRESSES, ExofiswapPairFactory.bytecode));
 		}
 
 		it("createPair", async () =>
@@ -167,6 +174,16 @@ describe("ExofiswapFactory", () =>
 			await ExofiswapFactory.transferOwnership(Bob.address);
 			expect(await ExofiswapFactory.owner()).to.eq(Bob.address);
 			await expect(ExofiswapFactory.transferOwnership(Alice.address)).to.be.revertedWith("Ownable: caller is not the owner");
+		});
+
+		it("pairCodeHash", async () =>
+		{
+			// const a = await UniswapV2Factory.pairCodeHash();
+			// const b = await ExofiswapFactory.pairCodeHash();
+			// console.debug(a);
+			// console.debug(b);
+			expect(await UniswapV2Factory.pairCodeHash()).eq("0x5840459a112f7f79827eeefe40576224813ec5674cf336ab58bfc258c7f9e362");
+			expect(await ExofiswapFactory.pairCodeHash()).eq("0x3a547d6893e3ea827cc055d253d297b5f0386ebdfaf0cf83bb6693857d2c6485");
 		});
 	});
 });

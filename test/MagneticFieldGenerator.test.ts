@@ -10,6 +10,7 @@ import { IERC20, IFermion, IMagneticFieldGenerator } from "../typechain-types";
 describe("MagneticFieldGenerator", () =>
 {
 	let MagneticFieldGeneratorFactory: ContractFactory;
+	let MagneticFieldGeneratorStoreFactory: ContractFactory;
 	let FermionFactory: ContractFactory;
 	let ERC20MockFactory: ContractFactory;
 	let Signers: SignerWithAddress[];
@@ -28,6 +29,7 @@ describe("MagneticFieldGenerator", () =>
 		Carol = Signers[2];
 		Minter = Signers[3];
 
+		MagneticFieldGeneratorStoreFactory = await ethers.getContractFactory("MagneticFieldGeneratorStore");
 		MagneticFieldGeneratorFactory = await ethers.getContractFactory("MagneticFieldGenerator");
 		FermionFactory = await ethers.getContractFactory("Fermion");
 		ERC20MockFactory = await ethers.getContractFactory("ERC20Mock", Minter);
@@ -44,6 +46,7 @@ describe("MagneticFieldGenerator", () =>
 
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "100", "0");
 			await Contract.deployed();
+			await setupStore();
 
 			await Fermion.transferOwnership(Contract.address);
 		});
@@ -285,6 +288,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, 1000, BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 
 			await MagneticFieldGenerator().add(100, lpToken.address, 100); // Lock from now to startBlock + 100 blocks.
@@ -299,6 +303,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, 1000, BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 
 			await AdvanceBlockTo(startBlock + 123);
@@ -314,6 +319,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, 1000, BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address, 100); // Lock from now to startBlock + 100 blocks.
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, 1000);
@@ -353,6 +359,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
@@ -373,6 +380,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			const mfgs = await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
@@ -384,44 +392,15 @@ describe("MagneticFieldGenerator", () =>
 			await NewContract.transferOwnership(Contract.address);
 			await MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
 
-			expect(await MagneticFieldGenerator().poolLength()).to.equal(3);
-			expect((await MagneticFieldGenerator().poolInfo(0)).allocPoint).to.equal(0);
-			expect((await MagneticFieldGenerator().poolInfo(1)).allocPoint).to.equal(0);
-			expect((await MagneticFieldGenerator().poolInfo(2)).allocPoint).to.equal(0);
+			expect(await MagneticFieldGenerator().poolLength()).to.equal(3); // read access is granted for everyone
+			expect((await MagneticFieldGenerator().poolInfo(0)).allocPoint).to.equal(100); // read access is granted for everyone
+			expect((await MagneticFieldGenerator().poolInfo(1)).allocPoint).to.equal(200); // read access is granted for everyone
+			expect((await MagneticFieldGenerator().poolInfo(2)).allocPoint).to.equal(300); // read access is granted for everyone
+			expect(await mfgs.owner()).to.equal(NewContract.address);
 			expect(await NewContract.poolLength()).to.equal(3);
 			expect((await NewContract.poolInfo(0)).allocPoint).to.equal(100);
 			expect((await NewContract.poolInfo(1)).allocPoint).to.equal(200);
 			expect((await NewContract.poolInfo(2)).allocPoint).to.equal(300);
-			expect(await NewContract.owner()).to.equal(Alice.address);
-			expect(await NewContract.successor()).to.equal(ADDRESS_ZERO);
-			expect(await Contract.successor()).to.equal(NewContract.address);
-		});
-
-		it("Should allow hand over to new MFG Contract active pools only", async () =>
-		{
-			const baseBlock = await GetBlockNumber();
-			const startBlock = baseBlock + 100;
-			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
-			await MagneticFieldGenerator().deployed();
-			await Fermion.transferOwnership(MagneticFieldGenerator().address);
-			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
-			await MagneticFieldGenerator().add(100, lpToken.address, 0);
-			await MagneticFieldGenerator().add(200, lpToken2.address, 0);
-			await MagneticFieldGenerator().add(300, lpToken3.address, 0);
-			await MagneticFieldGenerator().disablePool(1); // lpToken2 pool
-
-			const NewContract = (await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock))) as IMagneticFieldGenerator;
-			await NewContract.deployed();
-			await NewContract.transferOwnership(Contract.address);
-			await MagneticFieldGenerator().handOverToSuccessor(NewContract.address);
-
-			expect(await MagneticFieldGenerator().poolLength()).to.equal(3);
-			expect((await MagneticFieldGenerator().poolInfo(0)).allocPoint).to.equal(0);
-			expect((await MagneticFieldGenerator().poolInfo(1)).allocPoint).to.equal(0);
-			expect((await MagneticFieldGenerator().poolInfo(2)).allocPoint).to.equal(0);
-			expect(await NewContract.poolLength()).to.equal(2);
-			expect((await NewContract.poolInfo(0)).allocPoint).to.equal(100);
-			expect((await NewContract.poolInfo(1)).allocPoint).to.equal(300);
 			expect(await NewContract.owner()).to.equal(Alice.address);
 			expect(await NewContract.successor()).to.equal(ADDRESS_ZERO);
 			expect(await Contract.successor()).to.equal(NewContract.address);
@@ -433,6 +412,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
@@ -458,6 +438,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
@@ -479,6 +460,7 @@ describe("MagneticFieldGenerator", () =>
 
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
 			await MagneticFieldGenerator().add(limit, lpToken.address, 0);
@@ -499,6 +481,7 @@ describe("MagneticFieldGenerator", () =>
 
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
 			await MagneticFieldGenerator().add(limit, lpToken.address, 0);
@@ -520,6 +503,7 @@ describe("MagneticFieldGenerator", () =>
 
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
@@ -552,6 +536,7 @@ describe("MagneticFieldGenerator", () =>
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(0));
 
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
@@ -567,6 +552,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 100;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
 
 			const userInfo1 = await MagneticFieldGenerator().userInfo(0, Alice.address);
@@ -589,6 +575,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +100
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
 
@@ -607,6 +594,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +100
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
@@ -643,6 +631,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
 			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
@@ -659,6 +648,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(BigNumber.from(100), lpToken.address, 0);
 			await lpToken.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
@@ -677,6 +667,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +200
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
@@ -704,6 +695,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
@@ -779,6 +771,7 @@ describe("MagneticFieldGenerator", () =>
 			// 1000 per block farming rate starting at block +400
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
 			await lpToken2.connect(Bob).approve(MagneticFieldGenerator().address, "1000");
@@ -809,6 +802,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 400;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
 			await MagneticFieldGenerator().add(10, lpToken.address, 0);
@@ -826,6 +820,7 @@ describe("MagneticFieldGenerator", () =>
 			const startBlock = baseBlock + 400;
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "1000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await lpToken.connect(Alice).approve(MagneticFieldGenerator().address, "1000");
 			await MagneticFieldGenerator().add(10, lpToken.address, 0);
@@ -843,6 +838,7 @@ describe("MagneticFieldGenerator", () =>
 			// 2000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "2000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
 			await MagneticFieldGenerator().add(100, lpToken2.address, 0);
@@ -980,6 +976,7 @@ describe("MagneticFieldGenerator", () =>
 			// 2000 per block farming rate starting at block +300
 			Contract = await MagneticFieldGeneratorFactory.deploy(Fermion.address, "2000", BigNumber.from(startBlock));
 			await MagneticFieldGenerator().deployed();
+			await setupStore();
 			await Fermion.transferOwnership(MagneticFieldGenerator().address);
 			await MagneticFieldGenerator().add(100, lpToken.address, 0);
 			await MagneticFieldGenerator().add(100, lpToken2.address, 0);
@@ -1019,4 +1016,13 @@ describe("MagneticFieldGenerator", () =>
 			await StartAutomine();
 		});
 	});
+
+	async function setupStore()
+	{
+		const mfgs = await MagneticFieldGeneratorStoreFactory.deploy();
+		await mfgs.deployed();
+		await mfgs.transferOwnership(Contract.address);
+		MagneticFieldGenerator().setStore(mfgs.address);
+		return mfgs;
+	}
 });

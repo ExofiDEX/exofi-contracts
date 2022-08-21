@@ -17,17 +17,6 @@ contract ExofiswapFactory is IExofiswapFactory, Ownable
 	constructor()
 	{} // solhint-disable-line no-empty-blocks
 
-	function pairAddress(IERC20Metadata token0, IERC20Metadata token1) override external view returns (IExofiswapPair)
-	{
-		(IERC20Metadata tokenL, IERC20Metadata tokenR) = token0 < token1 ? (token0, token1) : (token1, token0);
-		return IExofiswapPair(address(uint160(uint256(keccak256(abi.encodePacked(
-				hex'ff',
-				address(this),
-				keccak256(abi.encodePacked(tokenL, tokenR)),
-				keccak256(abi.encodePacked(type(ExofiswapPair).creationCode, abi.encode(tokenL, tokenR))) // init code hash
-			))))));
-	}
-
 	function createPair(IERC20Metadata tokenA, IERC20Metadata tokenB) override public returns (IExofiswapPair)
 	{
 		require(tokenA != tokenB, "EF: IDENTICAL_ADDRESSES");
@@ -36,7 +25,8 @@ contract ExofiswapFactory is IExofiswapFactory, Ownable
 		require(address(_getPair[token0][token1]) == address(0), "EF: PAIR_EXISTS"); // single check is sufficient
 
 		bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-		IExofiswapPair pair = new ExofiswapPair{salt: salt}(token0, token1); // Use create2
+		IExofiswapPair pair = new ExofiswapPair{salt: salt}(); // Use create2
+		pair.initialize(token0, token1);
 
 		_getPair[token0][token1] = pair;
 		_getPair[token1][token0] = pair; // populate mapping in the reverse direction

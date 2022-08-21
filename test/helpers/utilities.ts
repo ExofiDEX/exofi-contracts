@@ -22,21 +22,6 @@ export function EncodePrice(reserve0: BigNumber, reserve1: BigNumber)
 export function GetCreate2Address(factoryAddress: string, [tokenA, tokenB]: [string, string], bytecode: string): string
 {
 	const [token0, token1] = tokenA < tokenB ? [tokenA, tokenB] : [tokenB, tokenA];
-	const ecodedParameters = defaultAbiCoder.encode(["address", "address"], [token0, token1]);
-	const fullcode = bytecode + ecodedParameters.substring(2);
-	const create2Inputs = [
-		"0xff",
-		factoryAddress,
-		keccak256(solidityPack(["address", "address"], [token0, token1])),
-		keccak256(fullcode)
-	];
-	const sanitizedInputs = `0x${create2Inputs.map(i => i.slice(2)).join("")}`;
-	return getAddress(`0x${keccak256(sanitizedInputs).slice(-40)}`);
-}
-
-export function UniGetCreate2Address(factoryAddress: string, [tokenA, tokenB]: [string, string], bytecode: string): string
-{
-	const [token0, token1] = tokenA < tokenB ? [tokenA, tokenB] : [tokenB, tokenA];
 	const create2Inputs = [
 		"0xff",
 		factoryAddress,

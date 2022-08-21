@@ -280,12 +280,12 @@ describe("ExofiswapPair", () =>
 
 			const exoTx = await ExofiswapPair().swap(expectedOutputAmount, 0, Alice.address, "0x");
 			const exoReceipt = await exoTx.wait();
-			expect(exoReceipt.gasUsed).to.eq(69523);
+			expect(exoReceipt.gasUsed).to.eq(73999);
 
 			const uniTx = await UniswapV2Pair().swap(expectedOutputAmount, 0, Alice.address, "0x");
 			const uniReceipt = await uniTx.wait();
 			// expect(receipt.gasUsed).to.eq(73462);
-			expect(uniReceipt.gasUsed).to.eq(73349);
+			expect(uniReceipt.gasUsed).to.eq(73358);
 		});
 
 		it("burn", async () =>

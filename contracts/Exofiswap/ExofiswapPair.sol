@@ -32,8 +32,8 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	uint112 private _reserve1;           // uses single storage slot, accessible via getReserves
 	uint32  private _blockTimestampLast; // uses single storage slot, accessible via getReserves
 	IExofiswapFactory private immutable _factory;
-	IERC20Metadata private immutable _token0;
-	IERC20Metadata private immutable _token1;
+	IERC20Metadata private _token0;
+	IERC20Metadata private _token1;
 
 	modifier lock()
 	{
@@ -43,10 +43,15 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 		_unlocked = 1;
 	}
 
-	constructor(IERC20Metadata token0Init, IERC20Metadata token1Init)
-		ExofiswapERC20(string(abi.encodePacked(token0Init.symbol(), "/", token1Init.symbol(), " Plasma")))
+	constructor() ExofiswapERC20("Plasma")
 	{
 		_factory = IExofiswapFactory(_msgSender());
+	}
+
+	// called once by the factory at time of deployment
+	function initialize(IERC20Metadata token0Init, IERC20Metadata token1Init) override external
+	{
+		require(_msgSender() == address(_factory), "EP: FORBIDDEN");
 		_token0 = token0Init;
 		_token1 = token1Init;
 	}
@@ -152,7 +157,8 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 		require(amount0Out > 0 || amount1Out > 0, "EP: INSUFFICIENT_OUTPUT_AMOUNT");
 		SwapAmount memory sa;
 		(sa.reserve0, sa.reserve1, ) = getReserves(); // gas savings
-		require(amount0Out < sa.reserve0 && amount1Out < sa.reserve1, "EP: INSUFFICIENT_LIQUIDITY");
+		require(amount0Out < sa.reserve0, "EP: INSUFFICIENT_LIQUIDITY");
+		require(amount1Out < sa.reserve1, "EP: INSUFFICIENT_LIQUIDITY");
 
 		(sa.balance0, sa.balance1) = _transferTokens(to, amount0Out, amount1Out, data);
 
@@ -194,6 +200,11 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	{
 		return _kLast;
 	}
+	
+	function name() override(ERC20, IERC20Metadata) public view virtual returns (string memory)
+	{
+		return string(abi.encodePacked(_token0.symbol(), "/", _token1.symbol(), " ", super.name()));
+	}
 
 	function price0CumulativeLast() override public view returns (uint256)
 	{
@@ -204,6 +215,7 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	{
 		return _price1CumulativeLast;
 	}
+
 
 	function token0() override public view returns (IERC20Metadata)
 	{
@@ -273,17 +285,24 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 	// update reserves and, on the first call per block, price accumulators
 	function _update(SwapAmount memory sa) private
 	{
-		require(sa.balance0 <= type(uint112).max && sa.balance1 <= type(uint112).max, "EP: OVERFLOW");
+		require(sa.balance0 <= type(uint112).max, "EP: OVERFLOW");
+		require(sa.balance1 <= type(uint112).max, "EP: OVERFLOW");
 		// solhint-disable-next-line not-rely-on-time
 		uint32 blockTimestamp = uint32(block.timestamp);
-		uint32 timeElapsed = MathUInt32.unsafeSub32(blockTimestamp, _blockTimestampLast); // overflow is desired
-		if (timeElapsed > 0 && sa.reserve0 != 0 && sa.reserve1 != 0)
+		if (sa.reserve1 != 0)
 		{
-			// * never overflows, and + overflow is desired
-			unchecked
-			{
-				_price0CumulativeLast += (UQ144x112.uqdiv(UQ144x112.encode(sa.reserve1),sa.reserve0) * timeElapsed);
-				_price1CumulativeLast += (UQ144x112.uqdiv(UQ144x112.encode(sa.reserve0), sa.reserve1) * timeElapsed);
+			if (sa.reserve0 != 0)
+			{	
+				uint32 timeElapsed = MathUInt32.unsafeSub32(blockTimestamp, _blockTimestampLast); // overflow is desired
+				if (timeElapsed > 0)
+				{	
+					// * never overflows, and + overflow is desired
+					unchecked
+					{
+						_price0CumulativeLast += (UQ144x112.uqdiv(UQ144x112.encode(sa.reserve1),sa.reserve0) * timeElapsed);
+						_price1CumulativeLast += (UQ144x112.uqdiv(UQ144x112.encode(sa.reserve0), sa.reserve1) * timeElapsed);
+					}
+				}
 			}
 		}
 		_reserve0 = uint112(sa.balance0);

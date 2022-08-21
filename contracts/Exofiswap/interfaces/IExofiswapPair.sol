@@ -13,6 +13,7 @@ interface IExofiswapPair is IExofiswapERC20
 	event Sync(uint112 reserve0, uint112 reserve1);
 
 	function burn(address to) external returns (uint256 amount0, uint256 amount1);
+	function initialize(IERC20Metadata token0Init, IERC20Metadata token1Init) external;
 	function mint(address to) external returns (uint256 liquidity);
 	function skim(address to) external;
 	function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;
