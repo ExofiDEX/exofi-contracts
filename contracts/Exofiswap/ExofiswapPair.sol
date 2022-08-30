@@ -126,7 +126,11 @@ contract ExofiswapPair is IExofiswapPair, ExofiswapERC20
 		else
 		{
 			//Div by uint can not overflow
-			liquidity = MathUInt256.min(MathUInt256.unsafeDiv(amount0 * totalSupplyValue, sa.reserve0), MathUInt256.unsafeDiv(amount1 * totalSupplyValue, sa.reserve1));
+			liquidity = 
+				MathUInt256.min(
+					MathUInt256.unsafeDiv(amount0 * totalSupplyValue, sa.reserve0),
+					MathUInt256.unsafeDiv(amount1 * totalSupplyValue, sa.reserve1)
+				);
 		}
 		require(liquidity > 0, "EP: INSUFFICIENT_LIQUIDITY");
 		_mint(to, liquidity);

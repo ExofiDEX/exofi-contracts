@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@exoda/contracts/interfaces/access/IOwnable.sol";
+import "@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata.sol";
 import "./IExofiswapFactory.sol";
 import "./IExofiswapPair.sol";
 import "./IMigrator.sol";

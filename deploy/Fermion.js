@@ -3,6 +3,8 @@ module.exports = async function ({ getNamedAccounts, deployments })
 	const { deploy } = deployments;
 	const { deployer } = await getNamedAccounts();
 
+	console.log("Fermion - Deploying contracts with deployer: ", deployer);
+
 	await deploy("Fermion",
 		{
 			from: deployer,

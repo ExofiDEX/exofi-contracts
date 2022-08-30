@@ -6,10 +6,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 
 	// eslint-disable-next-line no-undef
 	const chainId = await getChainId();
-	console.log(`ChainId: ${chainId}`);
-
 	let wethAddress;
-
 	switch (chainId)
 	{
 		case "1": // Mainnet
@@ -21,8 +18,13 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 		default:
 			throw new Error("Unknown ChainId");
 	}
-
 	const esf = await ethers.getContract("ExofiswapFactory");
+
+	console.log("ExofiswapRouter - Deploying contracts with deployer: ", deployer);
+	console.log(`ExofiswapRouter - Deploying contracts with chainId: ${chainId}`);
+	console.log(`ExofiswapRouter - Deploying contracts with wethAddress: ${wethAddress}`);
+	console.log(`ExofiswapRouter - Deploying contracts with ExofiswapFactory: ${esf.address}`);
+
 	await deploy("ExofiswapRouter",
 		{
 			from: deployer,

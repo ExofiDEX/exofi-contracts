@@ -3,6 +3,9 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	const { deploy } = deployments;
 	const { deployer, dev } = await getNamedAccounts();
 
+	console.log("ExofiswapFactory - Deploying contracts with deployer: ", deployer);
+	console.log("ExofiswapFactory - Deploying contracts with dev: ", dev);
+
 	await deploy("ExofiswapFactory",
 		{
 			from: deployer,
@@ -13,13 +16,10 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	const esf = await ethers.getContract("ExofiswapFactory");
 	const dep = esf.provider.getSigner(deployer);
 
-	console.log(await esf.owner());
-	console.log(deployer);
-	console.log(dev);
 	if (await esf.owner() !== dev)
 	{
 		// Transfer Fermion Ownership to
-		console.log("Transfer ExofiswapFactory Ownership to dev");
+		console.log("ExofiswapFactory - Transfer ExofiswapFactory Ownership to dev");
 		await (await esf.connect(dep).transferOwnership(dev)).wait();
 	}
 };

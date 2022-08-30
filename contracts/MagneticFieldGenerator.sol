@@ -35,6 +35,11 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		_startBlock = startBlock;
 	}
 
+	function setStore(IMagneticFieldGeneratorStore storeContract) override external onlyOwner
+	{
+		_store = storeContract;
+	}
+
 	/// @inheritdoc IMagneticFieldGenerator
 	function add(uint256 allocPoint, IERC20 lpToken, uint256 lockPeriod) override public onlyOwner
 	{
@@ -170,11 +175,6 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	function setMigrator(IMigratorDevice migratorContract) override public onlyOwner
 	{
 		_migrator = migratorContract;
-	}
-
-	function setStore(IMagneticFieldGeneratorStore storeContract) override external onlyOwner
-	{
-		_store = storeContract;
 	}
 
 	/// @notice Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.

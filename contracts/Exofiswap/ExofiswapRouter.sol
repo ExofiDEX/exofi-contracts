@@ -7,6 +7,7 @@ import "@exoda/contracts/utils/Context.sol";
 import "./libraries/ExofiswapLibrary.sol";
 import "./libraries/MathUInt256.sol";
 import "./interfaces/IExofiswapFactory.sol";
+import "./interfaces/IExofiswapPair.sol";
 import "./interfaces/IExofiswapRouter.sol";
 import "./interfaces/IWETH9.sol";
 
@@ -367,7 +368,7 @@ contract ExofiswapRouter is IExofiswapRouter, Context
 	) private returns (uint256, uint256, IExofiswapPair)
 	{
 		// create the pair if it doesn't exist yet
-		IExofiswapPair pair = ExofiswapLibrary.pairFor(_swapFactory, tokenA, tokenB);
+		IExofiswapPair pair = _swapFactory.getPair(tokenA, tokenB);
 		if (address(pair) == address(0))
 		{
 			pair = _swapFactory.createPair(tokenA, tokenB);

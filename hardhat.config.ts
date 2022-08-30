@@ -51,8 +51,8 @@ const config: HardhatUserConfig = {
 	},
 	contractSizer:
 	{
-		runOnCompile: true,
-		only: ["Router", "Factory", "Pair"]
+		runOnCompile: true
+		// only: ["Router", "Factory", "Pair"]
 	},
 	docgen: {
 		pages: pa, // "files",

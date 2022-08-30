@@ -3,6 +3,9 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	const { deploy } = deployments;
 	const { deployer, dev } = await getNamedAccounts();
 
+	console.log("MagneticFieldGeneratorStore - Deploying contracts with deployer: ", deployer);
+	console.log("MagneticFieldGeneratorStore - Deploying contracts with dev: ", dev);
+
 	await deploy("MagneticFieldGeneratorStore", {
 		from: deployer,
 		args: [],
@@ -18,9 +21,9 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	if (await mfgs.owner() !== mfg.address)
 	{
 		// Transfer ownership to MFG
-		console.log("Set MagneticFieldGeneratorStore for MagneticFieldGenerator");
+		console.log("MagneticFieldGeneratorStore - Set MagneticFieldGeneratorStore for MagneticFieldGenerator");
 		await (await mfg.connect(devSign).setStore(mfgs.address)).wait(); // Owner of MFG should already be dev
-		console.log("Transfer ownership of MagneticFieldGeneratorStore to MagneticFieldGenerator");
+		console.log("MagneticFieldGeneratorStore - Transfer ownership of MagneticFieldGeneratorStore to MagneticFieldGenerator");
 		await (await mfgs.connect(dep).transferOwnership(mfg.address)).wait();
 	}
 };
