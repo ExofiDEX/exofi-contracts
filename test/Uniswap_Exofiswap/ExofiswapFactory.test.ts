@@ -183,7 +183,7 @@ describe("ExofiswapFactory", () =>
 			// console.debug(a);
 			// console.debug(b);
 			expect(await UniswapV2Factory.pairCodeHash()).eq("0x5840459a112f7f79827eeefe40576224813ec5674cf336ab58bfc258c7f9e362");
-			expect(await ExofiswapFactory.pairCodeHash()).eq("0x3a547d6893e3ea827cc055d253d297b5f0386ebdfaf0cf83bb6693857d2c6485");
+			expect(await ExofiswapFactory.pairCodeHash()).eq("0x93f3fe0318003c7206f800a766c527c0780921761b1b6c75e682006484496187");
 		});
 	});
 });
