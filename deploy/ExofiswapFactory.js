@@ -45,6 +45,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	let usdcAddress;
 	let usdtAddress;
 	let daiAddress;
+	const fermionAddress = (await ethers.getContract("Fermion")).address;
 	switch (chainId)
 	{
 		case "1": // Mainnet
@@ -65,6 +66,25 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	let pairUsdcWeth = await esf.connect(dep).getPair(usdcAddress, wethAddress);
 	let pairUsdtWeth = await esf.connect(dep).getPair(usdtAddress, wethAddress);
 	let pairDaiWeth = await esf.connect(dep).getPair(daiAddress, wethAddress);
+	let pairFermionUsdt = await esf.connect(dep).getPair(fermionAddress, usdtAddress);
+	let pairFermionWeth = await esf.connect(dep).getPair(fermionAddress, wethAddress);
+
+	if (pairFermionWeth === "0x0000000000000000000000000000000000000000")
+	{
+		console.log("ExofiswapFactory - EXOFI/WETH Pair not found, start creating...");
+		await (await esf.connect(dep).createPair(fermionAddress, wethAddress)).wait();
+		console.log("ExofiswapFactory - EXOFI/WETH Pair created, validate...");
+		pairFermionWeth = await esf.connect(dep).getPair(fermionAddress, wethAddress);
+		if (pairFermionWeth === "0x0000000000000000000000000000000000000000")
+		{
+			console.log("ExofiswapFactory - EXOFI/WETH Pair still not found, cancel deployment");
+			throw new Error("EXOFI/WETH Pair not found");
+		}
+	}
+	else
+	{
+		console.log("ExofiswapFactory - EXOFI/WETH Pair found...");
+	}
 
 	if (pairUsdcWeth === "0x0000000000000000000000000000000000000000")
 	{
@@ -117,10 +137,28 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 		console.log("ExofiswapFactory - DAI/WETH Pair found...");
 	}
 
+	if (pairFermionUsdt === "0x0000000000000000000000000000000000000000")
+	{
+		console.log("ExofiswapFactory - EXODA/USDT Pair not found, start creating...");
+		await (await esf.connect(dep).createPair(fermionAddress, usdtAddress)).wait();
+		console.log("ExofiswapFactory - EXODA/USDT Pair created, validate...");
+		pairFermionUsdt = await esf.connect(dep).getPair(fermionAddress, usdtAddress);
+		if (pairFermionUsdt === "0x0000000000000000000000000000000000000000")
+		{
+			console.log("ExofiswapFactory - EXODA/USDT Pair still not found, cancel deployment");
+			throw new Error("EXODA/USDT Pair not found");
+		}
+	}
+	else
+	{
+		console.log("ExofiswapFactory - EXODA/USDT Pair found...");
+	}
+
 	console.log("ExofiswapFactory - USDC/WETH Pair address used: ", pairUsdcWeth);
 	console.log("ExofiswapFactory - USDT/WETH Pair address used: ", pairUsdtWeth);
 	console.log("ExofiswapFactory - DAI/WETH Pair address used: ", pairDaiWeth);
+	console.log("ExofiswapFactory - EXODA/USDT Pair address used: ", pairFermionUsdt);
 };
 
 module.exports.tags = ["ExofiswapFactory"];
-// module.exports.dependencies = ["UniswapV2Factory", "UniswapV2Router02"];
+module.exports.dependencies = ["Fermion"];

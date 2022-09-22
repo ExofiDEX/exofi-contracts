@@ -51,8 +51,24 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	// console.log("Set Migrator of MagneticFieldGenerator to UniMigrator");
 	// await (await mfg.connect(dep).setMigrator(uniMig.address)).wait();
 	// }
+
+	const mfgPools = await mfg.poolLength();
+	if (mfgPools.toNumber() === 0)
+	{
+		const factory = await ethers.getContract("ExofiswapFactory");
+		const pairsCount = (await factory.allPairsLength()).toNumber();
+		for (let i = 0; i < pairsCount; ++i)
+		{
+			const pair = await factory.allPairs(i);
+			console.log("MagneticFieldGenerator - Add MFG Pool with pair: ", pair);
+			await (await mfg.connect(dep).add(100, pair, 0)).wait(2);
+		}
+
+		console.log("MagneticFieldGenerator - Add MFG Pool with Fermion");
+		await (await mfg.connect(dep).add(100, fermion.address, 0)).wait(2);
+	}
 };
 
 module.exports.tags = ["MagneticFieldGenerator"];
 // module.exports.dependencies = ["Fermion", "UniMigrator"];
-module.exports.dependencies = ["Fermion"];
+module.exports.dependencies = ["Fermion", "ExofiswapFactory"];
