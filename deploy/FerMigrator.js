@@ -10,13 +10,12 @@ module.exports = async function ({ getNamedAccounts, deployments, ethers })
 	const mfg = await ethers.getContract("MagneticFieldGenerator");
 
 	await deploy("FerMigrator", {
-	from: deployer,
-	args: [mfg.address, planet.address],
-	log: true,
-	deterministicDeployment: false
+		from: deployer,
+		args: [mfg.address, planet.address],
+		log: true,
+		deterministicDeployment: false
 	});
 
-	
 	const ferMig = await ethers.getContract("FerMigrator");
 	const dep = ferMig.provider.getSigner(deployer);
 	if (await mfg.migrator() !== ferMig.address)
