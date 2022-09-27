@@ -1,10 +1,10 @@
-module.exports = async function ({ getNamedAccounts /* , deployments */ })
+module.exports = async function (/* { getNamedAccounts, deployments } */)
 {
 	// const { deploy } = deployments;
-	const { deployer, dev } = await getNamedAccounts();
+	// const { deployer, dev } = await getNamedAccounts();
 
-	console.log("MagneticFieldGenerator - Deploying contracts with deployer: ", deployer);
-	console.log("MagneticFieldGenerator - Deploying contracts with dev: ", dev);
+	// console.log("MagneticFieldGenerator - Deploying contracts with deployer: ", deployer);
+	// console.log("MagneticFieldGenerator - Deploying contracts with dev: ", dev);
 
 // await deploy("UniMigrator", {
 // from: deployer,

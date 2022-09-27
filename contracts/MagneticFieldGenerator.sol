@@ -6,6 +6,7 @@ import "@exoda/contracts/access/Ownable.sol";
 import "@exoda/contracts/interfaces/token/ERC20/IERC20.sol";
 import "@exoda/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IMagneticFieldGenerator.sol";
+import "./interfaces/IPlanet.sol";
 
 // MagneticFieldGenerator is the master of Fermion. He can make Fermion and he is a fair machine.
 contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
@@ -27,12 +28,15 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 	// The migrator contract. It has a lot of power. Can only be set through governance (owner).
 	IMagneticFieldGenerator private _successor;
 	IMagneticFieldGeneratorStore private _store;
+	IPlanet private immutable _planet;
 
-	constructor(IFermion fermion, uint256 fermionPerBlock, uint256 startBlock)
+	constructor(IFermion fermion, IPlanet planet, uint256 fermionPerBlock, uint256 startBlock)
 	{
 		_fermion = fermion;
 		_fermionPerBlock = fermionPerBlock;
 		_startBlock = startBlock;
+		_planet = planet;
+		require(_fermion == _planet.token(), "MFG: Wrong Planet");
 	}
 
 	function setStore(IMagneticFieldGeneratorStore storeContract) override external onlyOwner
@@ -48,6 +52,12 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		massUpdatePools();
 		uint256 lastRewardBlock = block.number > _startBlock ? block.number : _startBlock;
 		_totalAllocPoint = _totalAllocPoint + allocPoint;
+		if(lpToken == _fermion)
+		{
+			lpToken = _planet;
+			// Approve Planet to transfer fermion tokens.
+			_fermion.approve(address(_planet), type(uint256).max);
+		}
 		_store.newPoolInfo(
 			PoolInfo({
 				lpToken: lpToken,
@@ -71,7 +81,19 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		user.rewardDebt += int256(((amount * pool.accFermionPerShare) / _ACC_FERMION_PRECISSION));
 		_store.updateUserInfo(pid, to, user); // Save changes
 
-		pool.lpToken.safeTransferFrom(address(_msgSender()), address(this), amount);
+		
+		// If the deposit token is Fermion exchange the correct amount with PlanetFermion Tokens.
+		if(pool.lpToken == _planet)
+		{
+			// Grab the Fermions
+			SafeERC20.safeTransferFrom(_fermion, address(_msgSender()), address(this), amount);
+			// Exchange the Fermions and send PlanetTokens to MFG.
+			_planet.enter(amount, address(this));
+		}
+		else
+		{
+			SafeERC20.safeTransferFrom(pool.lpToken, address(_msgSender()), address(this), amount);
+		}
 		emit Deposit(_msgSender(), pid, amount, to);
 	}
 
@@ -86,7 +108,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		_store.updatePoolInfo(pid, pi);
 	}
 
-	// Withdraw without caring about rewards. EMERGENCY ONLY.
+	// Withdraw without careing about rewards. EMERGENCY ONLY.
 	function emergencyWithdraw(uint256 pid, address to) public override
 	{
 		PoolInfo memory pool = _store.getPoolInfo(pid);
@@ -94,7 +116,17 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		UserInfo memory user = _store.getUserInfo(pid,_msgSender());
 
 		uint256 userAmount = user.amount;
-		pool.lpToken.safeTransfer(to, userAmount);
+
+		if(pool.lpToken == _planet)
+		{
+			//Special Handling Fermion Pool
+			_planet.leave(userAmount, address(this));
+			SafeERC20.safeTransfer(_fermion, to, userAmount);
+		}
+		else
+		{
+			pool.lpToken.safeTransfer(to, userAmount);
+		}
 		emit EmergencyWithdraw(_msgSender(), pid, userAmount, to);
 		user.amount = 0;
 		user.rewardDebt = 0;
@@ -113,6 +145,8 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		massUpdatePools();
 		_store.transferOwnership(address(suc));
 		_successor.setStore(_store);
+		// Hand over Planet
+		_planet.transferOwnership(address(suc));
 
 		suc.transferOwnership(owner());
 	}
@@ -143,6 +177,7 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
 		pool.lpToken = newLpToken;
 		_store.updatePoolInfo(pid, pool);
+		emit Migrate(pid, bal, lpToken, newLpToken);
 	}
 
 	/// @notice Leaves the contract without owner. Can only be called by the current owner.
@@ -226,14 +261,13 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		user.rewardDebt = int256(fermionShare);
 
 		_store.updateUserInfo(pid, _msgSender(), user);
-		// THOUGHTS on _safeFermionTransfer(_msgSender(), pending);
-		// The intend was that if there is a rounding error and MFG does therefore not hold enouth Fermion,
+		// THOUGHTS on a previous Fermion balance check at this point
+		// The intend was that if there was a rounding error and MFG does therefore not hold enouth Fermion 
 		// the available amount of Fermion will be used.
-		// Since all variables are used in divisions are uint rounding errors can only appear in the form of cut of decimals.
-		// if(user.amount == 0 && user.rewardDebt == 0)
-		// {
-		// 	_poolInfo[pid].participants.remove(_msgSender());
-		// }
+		// BUT since all variables are used in divisions are uint especially accFermionPerShare.
+		// Rounding errors can only appear in the form of cut of decimals.
+		// A calculated fermionShare can therefor only be equal or smaller than the real value (with unlimited precision)
+		// Therefore there should always be enough Fermion.
 		_fermion.transfer(to, pending);
 		emit Harvest(_msgSender(), pid, pending, to);
 	}
@@ -259,7 +293,16 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		userAmount = _unsafeSub(userAmount, amount);
 		user.amount = userAmount;
 		_store.updateUserInfo(pid, _msgSender(), user);
-		pool.lpToken.safeTransfer(to, amount);
+		if(pool.lpToken == _planet)
+		{
+			//Special Handling Fermion Pool
+			_planet.leave(amount, address(this));
+			SafeERC20.safeTransfer(_fermion, to, amount);
+		}
+		else
+		{
+			pool.lpToken.safeTransfer(to, amount);
+		}
 		emit Withdraw(_msgSender(), pid, amount, to);
 	}
 
@@ -280,6 +323,13 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 
 		// Division of uint can not overflow.
 		uint256 pending = uint256(int256(_unsafeDiv((user.amount * accFermionPerShare), _ACC_FERMION_PRECISSION)) - user.rewardDebt);
+		// THOUGHTS on a previous Fermion balance check at this point
+		// The intend was that if there was a rounding error and MFG does therefore not hold enouth Fermion 
+		// the available amount of Fermion will be used.
+		// BUT since all variables are used in divisions are uint especially accFermionPerShare.
+		// Rounding errors can only appear in the form of cut of decimals.
+		// A calculated fermionShare can therefor only be equal or smaller than the real value (with unlimited precision)
+		// Therefore there should always be enough Fermion.
 		_fermion.transfer(to, pending);
 
 		// Can not overflow. Checked with require.
@@ -288,7 +338,16 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		// Division of uint can not overflow.
 		user.rewardDebt = int256(_unsafeDiv(userAmount * accFermionPerShare, _ACC_FERMION_PRECISSION));
 		_store.updateUserInfo(pid, _msgSender(), user);
-		pool.lpToken.safeTransfer(to, amount);
+		if(pool.lpToken == _planet)
+		{
+			//Special Handling Fermion Pool
+			_planet.leave(amount, address(this));
+			SafeERC20.safeTransfer(_fermion, to, amount);
+		}
+		else
+		{
+			pool.lpToken.safeTransfer(to, amount);
+		}
 		emit Withdraw(_msgSender(), pid, amount, to);
 		emit Harvest(_msgSender(), pid, pending, to);
 	}

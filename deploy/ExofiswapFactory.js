@@ -17,13 +17,13 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	const esf = await ethers.getContract("ExofiswapFactory");
 	const dep = esf.provider.getSigner(deployer);
 
-	const exprectedPairCodeHash = "0x93f3fe0318003c7206f800a766c527c0780921761b1b6c75e682006484496187";
+	const exprectedPairCodeHash = "0x2b030e03595718f09be5b952e8e9e44159b3fcf385422d5db25485106f124f44";
 	const actualPairCodeHash = await esf.pairCodeHash();
 
 	console.log("ExofiswapFactory - Verify Pair creation code hash: ", exprectedPairCodeHash);
 	if (exprectedPairCodeHash !== actualPairCodeHash)
 	{
-		console.log("ExofiswapFactory - Pair creation code has unexpected value of: ", actualPairCodeHash);
+		console.log("ExofiswapFactory - Pair creation code hash has unexpected value of: ", actualPairCodeHash);
 		throw new Error("Pair creation code hash mismatch!");
 	}
 	else
@@ -139,13 +139,13 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 
 	if (pairFermionUsdt === "0x0000000000000000000000000000000000000000")
 	{
-		console.log("ExofiswapFactory - EXODA/USDT Pair not found, start creating...");
+		console.log("ExofiswapFactory - EXOFI/USDT Pair not found, start creating...");
 		await (await esf.connect(dep).createPair(fermionAddress, usdtAddress)).wait();
-		console.log("ExofiswapFactory - EXODA/USDT Pair created, validate...");
+		console.log("ExofiswapFactory - EXOFI/USDT Pair created, validate...");
 		pairFermionUsdt = await esf.connect(dep).getPair(fermionAddress, usdtAddress);
 		if (pairFermionUsdt === "0x0000000000000000000000000000000000000000")
 		{
-			console.log("ExofiswapFactory - EXODA/USDT Pair still not found, cancel deployment");
+			console.log("ExofiswapFactory - EXOFI/USDT Pair still not found, cancel deployment");
 			throw new Error("EXODA/USDT Pair not found");
 		}
 	}
@@ -154,10 +154,11 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 		console.log("ExofiswapFactory - EXODA/USDT Pair found...");
 	}
 
+	console.log("ExofiswapFactory - EXOFI/WETH Pair address used: ", pairFermionWeth);
 	console.log("ExofiswapFactory - USDC/WETH Pair address used: ", pairUsdcWeth);
 	console.log("ExofiswapFactory - USDT/WETH Pair address used: ", pairUsdtWeth);
 	console.log("ExofiswapFactory - DAI/WETH Pair address used: ", pairDaiWeth);
-	console.log("ExofiswapFactory - EXODA/USDT Pair address used: ", pairFermionUsdt);
+	console.log("ExofiswapFactory - EXOFI/USDT Pair address used: ", pairFermionUsdt);
 };
 
 module.exports.tags = ["ExofiswapFactory"];

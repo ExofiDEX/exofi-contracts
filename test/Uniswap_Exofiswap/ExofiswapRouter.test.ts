@@ -1352,7 +1352,7 @@ describe("ExofiswapRouter", () =>
 					}
 				);
 				const receipt = await tx.wait();
-				expect(receipt.gasUsed).to.eq(102721);
+				expect(receipt.gasUsed).to.eq(102791);
 			}).retries(3);
 		});
 

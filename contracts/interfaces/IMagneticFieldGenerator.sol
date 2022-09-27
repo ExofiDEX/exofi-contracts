@@ -14,6 +14,7 @@ interface IMagneticFieldGenerator
 	event LogPoolAddition(uint256 indexed pid, uint256 allocPoint, IERC20 indexed lpToken);
 	event LogSetPool(uint256 indexed pid, uint256 allocPoint);
 	event LogUpdatePool(uint256 indexed pid, uint256 lastRewardBlock, uint256 lpSupply, uint256 accFermionPerShare);
+	event Migrate(uint256 indexed pid, uint256 balance, IERC20 indexed fromToken, IERC20 indexed toToken);
 	event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
 
 	/// @notice Add a new LP to the pool. Can only be called by the owner.

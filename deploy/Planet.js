@@ -7,21 +7,13 @@ module.exports = async function ({ getNamedAccounts, deployments, ethers })
 
 	const fermion = await ethers.getContract("Fermion");
 
-	const { address } = await deploy("Planet",
+	await deploy("Planet",
 		{
 			from: deployer,
+			args: [fermion.address],
 			log: true,
 			deterministicDeployment: false
 		});
-
-	const planet = await ethers.getContract("Planet");
-	const dep = planet.provider.getSigner(deployer);
-	const token = await planet.token();
-	if (token === "0x0000000000000000000000000000000000000000")
-	{
-		console.log("Planet - Initialize with Fermion with deployer: ", deployer);
-		await (await planet.connect(dep).initialize(fermion.address)).wait();
-	}
 };
 
 module.exports.tags = ["Planet"];

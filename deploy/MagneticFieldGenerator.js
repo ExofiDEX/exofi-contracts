@@ -3,6 +3,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	const { deploy } = deployments;
 	const { deployer, dev } = await getNamedAccounts();
 	const fermion = await ethers.getContract("Fermion");
+	const planet = await ethers.getContract("Planet");
 
 	// Max supply = 1 000 000 000 000000000000000000; // 1 Billion with 18 decimals
 	// premint    =   400 000 000 000000000000000000; // 400 Million with 18 decimals
@@ -17,12 +18,13 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	console.log("MagneticFieldGenerator - Deploying contracts with deployer: ", deployer);
 	console.log("MagneticFieldGenerator - Deploying contracts with dev: ", dev);
 	console.log("MagneticFieldGenerator - Deploying contracts with fermion.address: ", fermion.address);
+	console.log("MagneticFieldGenerator - Deploying contracts with planet.address: ", planet.address);
 	console.log("MagneticFieldGenerator - Deploying contracts with fermionPerBlock: ", fermionPerBlock);
 	console.log("MagneticFieldGenerator - Deploying contracts with startBlock: ", startBlock);
 
 	const { address } = await deploy("MagneticFieldGenerator", {
 		from: deployer,
-		args: [fermion.address, fermionPerBlock, startBlock],
+		args: [fermion.address, planet.address, fermionPerBlock, startBlock],
 		log: true,
 		deterministicDeployment: false
 	});
@@ -34,6 +36,13 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 		// Transfer Fermion Ownership to
 		console.log("MagneticFieldGenerator - Transfer Fermion Ownership to MagneticFieldGenerator");
 		await (await fermion.connect(dep).transferOwnership(address)).wait();
+	}
+
+	if (await planet.owner() !== address)
+	{
+		// Transfer Planet Ownership to
+		console.log("MagneticFieldGenerator - Transfer Planet Ownership to MagneticFieldGenerator");
+		await (await planet.connect(dep).transferOwnership(address)).wait();
 	}
 
 	const mfg = await ethers.getContract("MagneticFieldGenerator");
@@ -51,24 +60,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 	// console.log("Set Migrator of MagneticFieldGenerator to UniMigrator");
 	// await (await mfg.connect(dep).setMigrator(uniMig.address)).wait();
 	// }
-
-	const mfgPools = await mfg.poolLength();
-	if (mfgPools.toNumber() === 0)
-	{
-		const factory = await ethers.getContract("ExofiswapFactory");
-		const pairsCount = (await factory.allPairsLength()).toNumber();
-		for (let i = 0; i < pairsCount; ++i)
-		{
-			const pair = await factory.allPairs(i);
-			console.log("MagneticFieldGenerator - Add MFG Pool with pair: ", pair);
-			await (await mfg.connect(dep).add(100, pair, 0)).wait(2);
-		}
-
-		console.log("MagneticFieldGenerator - Add MFG Pool with Fermion");
-		await (await mfg.connect(dep).add(100, fermion.address, 0)).wait(2);
-	}
 };
 
 module.exports.tags = ["MagneticFieldGenerator"];
-// module.exports.dependencies = ["Fermion", "UniMigrator"];
-module.exports.dependencies = ["Fermion", "ExofiswapFactory"];
+module.exports.dependencies = ["Fermion", "Planet"];
