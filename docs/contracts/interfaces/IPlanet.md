@@ -1,26 +1,18 @@
 ---
-filename: /contracts/Fermion
-type: contract
+filename: /contracts/interfaces/IPlanet
+type: interface
 ---
 
-## Fermion
-
-_Implementation of the {IFermion} interface._
+## IPlanet
 
 ***
 
 ### Implements
 
-- [Context](/@exoda/contracts/utils/Context)
-- [ERC20](/@exoda/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
 - [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
 - [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IFermion](/contracts/interfaces/IFermion)
 - [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
-- [Ownable](/@exoda/contracts/access/Ownable)
 
 ***
 
@@ -41,6 +33,18 @@ NOTE: {value} may be zero.
 | owner | address | true | (indexed) The owner of the tokens. |
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
+
+#### Enter
+
+```solidity
+event Enter(address sender, uint256 amount, address to)
+```
+
+#### Leave
+
+```solidity
+event Leave(address sender, uint256 amount, address to)
+```
 
 #### OwnershipTransferred
 
@@ -75,18 +79,22 @@ NOTE: {value} may be zero.
 
 ### Functions
 
-#### constructor
+#### enter
 
 ```solidity
-constructor() public
+function enter(uint256 amount, address to) external
 ```
 
-#### mint
+#### leave
 
 ```solidity
-function mint(address to, uint256 amount) public
+function leave(uint256 amount, address to) external
 ```
 
-Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
+#### token
+
+```solidity
+function token() external view returns (contract IERC20Metadata)
+```
 
 [Back](/index)

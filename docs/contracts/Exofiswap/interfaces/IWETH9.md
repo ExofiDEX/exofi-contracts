@@ -1,26 +1,16 @@
 ---
-filename: /contracts/Fermion
-type: contract
+filename: /contracts/Exofiswap/interfaces/IWETH9
+type: interface
 ---
 
-## Fermion
-
-_Implementation of the {IFermion} interface._
+## IWETH9
 
 ***
 
 ### Implements
 
-- [Context](/@exoda/contracts/utils/Context)
-- [ERC20](/@exoda/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
 - [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IFermion](/contracts/interfaces/IFermion)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
-- [Ownable](/@exoda/contracts/access/Ownable)
 
 ***
 
@@ -42,18 +32,11 @@ NOTE: {value} may be zero.
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
 
-#### OwnershipTransferred
+#### Deposit
 
 ```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
+event Deposit(address from, uint256 value)
 ```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
 
 #### Transfer
 
@@ -71,22 +54,26 @@ NOTE: {value} may be zero.
 | to | address | true | (indexed) The target of the transfer. |
 | value | uint256 | false | The amount of tokens that got transfered. |
 
+#### Withdraw
+
+```solidity
+event Withdraw(address to, uint256 value)
+```
+
 ***
 
 ### Functions
 
-#### constructor
+#### deposit
 
 ```solidity
-constructor() public
+function deposit() external payable
 ```
 
-#### mint
+#### withdraw
 
 ```solidity
-function mint(address to, uint256 amount) public
+function withdraw(uint256 value) external
 ```
-
-Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
 
 [Back](/index)

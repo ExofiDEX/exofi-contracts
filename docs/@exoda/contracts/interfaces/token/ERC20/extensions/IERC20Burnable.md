@@ -1,21 +1,18 @@
 ---
-filename: /contracts/interfaces/IFermion
+filename: /@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable
 type: interface
 ---
 
-## IFermion
+## IERC20Burnable
 
-_Interface of the Fermion token._
+Interface for the extension of {ERC20} that allows token holders to destroy both their own tokens
+and those that they have an allowance for.
 
 ***
 
 ### Implements
 
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
-- [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
 
 ***
 
@@ -37,19 +34,6 @@ NOTE: {value} may be zero.
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
 
-#### OwnershipTransferred
-
-```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
-```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
-
 #### Transfer
 
 ```solidity
@@ -70,14 +54,33 @@ NOTE: {value} may be zero.
 
 ### Functions
 
-#### mint
+#### burn
 
 ```solidity
-function mint(address to, uint256 amount) external
+function burn(uint256 amount) external
 ```
 
-_Mints `amount` tokens to `account`.
+Destroys {amount} tokens from the caller.
 
-Emits a {Transfer} event with `from` set to the zero address._
+Emits an {Transfer} event.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The {amount} of tokens that should be destroyed. |
+
+#### burnFrom
+
+```solidity
+function burnFrom(address account, uint256 amount) external
+```
+
+Destroys {amount} tokens from {account}, deducting from the caller's allowance.
+
+Emits an {Approval} and an {Transfer} event.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account | address | The {account} where the tokens should be destroyed. |
+| amount | uint256 | The {amount} of tokens that should be destroyed. |
 
 [Back](/index)

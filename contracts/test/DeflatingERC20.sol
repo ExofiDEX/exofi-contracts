@@ -1,26 +1,35 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract DeflatingERC20
+interface IDeflatingERC20
 {
-    string public constant name = "Deflating Test Token";
-    string public constant symbol = "DTT";
-    uint8 public constant decimals = 18;
-    uint  public totalSupply;
-    mapping(address => uint) public balanceOf;
-    mapping(address => mapping(address => uint)) public allowance;
+    function approve(address spender, uint value) external returns (bool);
+    function transfer(address to, uint value) external returns (bool);
+    function transferFrom(address from, address to, uint value) external returns (bool);
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+}
 
-    bytes32 public DOMAIN_SEPARATOR;
+contract DeflatingERC20 is IDeflatingERC20
+{
+    string public constant name = "Deflating Test Token"; // solhint-disable-line const-name-snakecase
+    string public constant symbol = "DTT"; // solhint-disable-line const-name-snakecase
+    uint8 public constant decimal = 18; // solhint-disable-line const-name-snakecase
+
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    bytes32 public domainSeparator;
     // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
-    mapping(address => uint) public nonces;
+    mapping(address => uint256) public nonces;
 
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
 
-    constructor(uint256 _totalSupply)
+    constructor(uint256 totalSupply_)
 	{
-        DOMAIN_SEPARATOR = keccak256(
+        domainSeparator = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(name)),
@@ -29,7 +38,40 @@ contract DeflatingERC20
                 address(this)
             )
         );
-        _mint(msg.sender, _totalSupply);
+        _mint(msg.sender, totalSupply_);
+    }
+
+    function approve(address spender, uint value) override external returns (bool) {
+        _approve(msg.sender, spender, value);
+        return true;
+    }
+
+    function transfer(address to, uint value) override external returns (bool) {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint value) override external returns (bool) {
+        if (allowance[from][msg.sender] != type(uint256).max) {
+            allowance[from][msg.sender] = allowance[from][msg.sender] - value;
+        }
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) override external {
+        // solhint-disable-next-line not-rely-on-time
+        require(deadline >= block.timestamp, "EXPIRED");
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+            )
+        );
+        address recoveredAddress = ecrecover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNATURE");
+        _approve(owner, spender, value);
     }
 
     function _mint(address to, uint value) internal {
@@ -56,37 +98,5 @@ contract DeflatingERC20
         balanceOf[from] = balanceOf[from] - transferAmount;
         balanceOf[to] = balanceOf[to] + transferAmount;
         emit Transfer(from, to, transferAmount);
-    }
-
-    function approve(address spender, uint value) external returns (bool) {
-        _approve(msg.sender, spender, value);
-        return true;
-    }
-
-    function transfer(address to, uint value) external returns (bool) {
-        _transfer(msg.sender, to, value);
-        return true;
-    }
-
-    function transferFrom(address from, address to, uint value) external returns (bool) {
-        if (allowance[from][msg.sender] != type(uint256).max) {
-            allowance[from][msg.sender] = allowance[from][msg.sender] - value;
-        }
-        _transfer(from, to, value);
-        return true;
-    }
-
-    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        require(deadline >= block.timestamp, "EXPIRED");
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
-            )
-        );
-        address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNATURE");
-        _approve(owner, spender, value);
     }
 }

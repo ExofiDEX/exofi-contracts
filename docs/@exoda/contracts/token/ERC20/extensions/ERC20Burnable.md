@@ -1,11 +1,13 @@
 ---
-filename: /contracts/Fermion
+filename: /@exoda/contracts/token/ERC20/extensions/ERC20Burnable
 type: contract
 ---
 
-## Fermion
+## ERC20Burnable
 
-_Implementation of the {IFermion} interface._
+Extension of {ERC20} that allows token holders to destroy both their own
+tokens and those that they have an allowance for, in a way that can be
+recognized off-chain (via event analysis).
 
 ***
 
@@ -13,14 +15,10 @@ _Implementation of the {IFermion} interface._
 
 - [Context](/@exoda/contracts/utils/Context)
 - [ERC20](/@exoda/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
 - [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
 - [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
 - [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IFermion](/contracts/interfaces/IFermion)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
-- [Ownable](/@exoda/contracts/access/Ownable)
 
 ***
 
@@ -41,19 +39,6 @@ NOTE: {value} may be zero.
 | owner | address | true | (indexed) The owner of the tokens. |
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
-
-#### OwnershipTransferred
-
-```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
-```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
 
 #### Transfer
 
@@ -78,15 +63,38 @@ NOTE: {value} may be zero.
 #### constructor
 
 ```solidity
-constructor() public
+constructor(string tokenName, string tokenSymbol) public
 ```
 
-#### mint
+Sets the values for {name} and {symbol}.
+
+The default value of {decimals} is 18. To select a different value for
+{decimals} you should overload it.
+
+All two of these values are immutable: they can only be set once during
+construction.
+
+#### burn
 
 ```solidity
-function mint(address to, uint256 amount) public
+function burn(uint256 amount) public virtual
 ```
 
-Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
+Destroys `amount` tokens from the caller.
+
+See {ERC20-_burn}.
+
+#### burnFrom
+
+```solidity
+function burnFrom(address account, uint256 amount) public virtual
+```
+
+Destroys `amount` tokens from `account`, deducting from the caller's allowance.
+
+See {ERC20-_burn} and {ERC20-allowance}.
+
+Requirements:
+- the caller must have allowance for `account`'s tokens of at least `amount`.
 
 [Back](/index)

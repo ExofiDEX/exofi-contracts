@@ -1,11 +1,9 @@
 ---
-filename: /contracts/Fermion
+filename: /contracts/Exofiswap/ExofiswapERC20
 type: contract
 ---
 
-## Fermion
-
-_Implementation of the {IFermion} interface._
+## ExofiswapERC20
 
 ***
 
@@ -13,14 +11,10 @@ _Implementation of the {IFermion} interface._
 
 - [Context](/@exoda/contracts/utils/Context)
 - [ERC20](/@exoda/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
 - [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
 - [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IFermion](/contracts/interfaces/IFermion)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
-- [Ownable](/@exoda/contracts/access/Ownable)
+- [IExofiswapERC20](/contracts/Exofiswap/interfaces/IExofiswapERC20)
 
 ***
 
@@ -41,19 +35,6 @@ NOTE: {value} may be zero.
 | owner | address | true | (indexed) The owner of the tokens. |
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
-
-#### OwnershipTransferred
-
-```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
-```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
 
 #### Transfer
 
@@ -78,15 +59,31 @@ NOTE: {value} may be zero.
 #### constructor
 
 ```solidity
-constructor() public
+constructor(string tokenName) public
 ```
 
-#### mint
+#### permit
 
 ```solidity
-function mint(address to, uint256 amount) public
+function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) public
 ```
 
-Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
+#### DOMAIN_SEPARATOR
+
+```solidity
+function DOMAIN_SEPARATOR() public view returns (bytes32)
+```
+
+#### nonces
+
+```solidity
+function nonces(address owner) public view returns (uint256)
+```
+
+#### PERMIT_TYPEHASH
+
+```solidity
+function PERMIT_TYPEHASH() public pure returns (bytes32)
+```
 
 [Back](/index)

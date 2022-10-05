@@ -9,25 +9,18 @@ interface IFixture
 {
 	exoMockToken0: IERC20Metadata
 	exoMockToken1: IERC20Metadata
-	uniMockToken0: Contract
-	uniMockToken1: Contract
 	WETH: Contract
 	exoWETHPartner: IERC20Metadata
-	uniWETHPartner: Contract
 	// factoryV1: Contract
 	exoFactory: IExofiswapFactory
-	uniFactoryV2: Contract
 	// router01: Contract
 	exoRouter: IExofiswapRouter
-	uniRouter02: Contract
 	routerEventEmitter: Contract
 	// router: Contract
 	// migrator: Contract
 	// WETHExchangeV1: Contract
 	exoPair: IExofiswapPair
-	uniPair: Contract
 	exoWETHPair: IExofiswapPair
-	uniWETHPair: Contract
 }
 
 export async function Fixture(wallet: SignerWithAddress): Promise<IFixture>
@@ -41,38 +34,6 @@ export async function Fixture(wallet: SignerWithAddress): Promise<IFixture>
 	await routerEventEmitter.deployed();
 
 	const mockTokenFactory = await ethers.getContractFactory("ERC20Mock");
-
-	let uniMockToken0 = (await mockTokenFactory.deploy("UniMockToken0", "MKT0", ExpandTo18Decimals(10000))) as IERC20Metadata;
-	await uniMockToken0.deployed();
-	let uniMockToken1 = (await mockTokenFactory.deploy("UniMockToken1", "MKT1", ExpandTo18Decimals(10000))) as IERC20Metadata;
-	await uniMockToken1.deployed();
-	if (uniMockToken1.address < uniMockToken0.address)
-	{
-		const help = uniMockToken0;
-		uniMockToken0 = uniMockToken1;
-		uniMockToken1 = help;
-	}
-
-	const uniWETHPartner = (await mockTokenFactory.deploy("UniMockToken WETH Partner", "uniWP", ExpandTo18Decimals(10000))) as IERC20Metadata;
-	await uniWETHPartner.deployed();
-
-	const uniFactoryV2Factory = await ethers.getContractFactory("UniswapV2Factory");
-	const uniFactoryV2 = await uniFactoryV2Factory.deploy(wallet.address);
-	await uniFactoryV2.deployed();
-	// console.log(await uniFactoryV2.pairCodeHash());
-
-	const uniRouter02Factory = await ethers.getContractFactory("UniswapV2Router02");
-	const uniRouter02 = await uniRouter02Factory.deploy(uniFactoryV2.address, WETH.address);
-	await uniRouter02.deployed();
-
-	await uniFactoryV2.createPair(uniMockToken0.address, uniMockToken1.address);
-	const uniPairAddress = await uniFactoryV2.getPair(uniMockToken0.address, uniMockToken1.address);
-	const uniPair = await ethers.getContractAt("UniswapV2Pair", uniPairAddress);
-
-	await uniFactoryV2.createPair(WETH.address, uniWETHPartner.address);
-	const uniWETHPairAddress = await uniFactoryV2.getPair(WETH.address, uniWETHPartner.address);
-	const uniWETHPair = (await ethers.getContractAt("ExofiswapPair", uniWETHPairAddress)) as IExofiswapPair;
-
 	let exoMockToken0 = (await mockTokenFactory.deploy("ExoMockToken0", "MKT0", ExpandTo18Decimals(10000))) as IERC20Metadata;
 	await exoMockToken0.deployed();
 	let exoMockToken1 = (await mockTokenFactory.deploy("ExoMockToken1", "MKT1", ExpandTo18Decimals(10000))) as IERC20Metadata;
@@ -107,19 +68,12 @@ export async function Fixture(wallet: SignerWithAddress): Promise<IFixture>
 	return {
 		exoMockToken0,
 		exoMockToken1,
-		uniMockToken0,
-		uniMockToken1,
 		WETH,
 		exoWETHPartner,
-		uniWETHPartner,
 		exoFactory,
-		uniFactoryV2,
 		exoRouter,
-		uniRouter02,
 		routerEventEmitter,
 		exoPair,
-		uniPair,
-		exoWETHPair,
-		uniWETHPair
+		exoWETHPair
 	};
 }

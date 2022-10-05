@@ -1,11 +1,9 @@
 ---
-filename: /contracts/Fermion
+filename: /contracts/Planet
 type: contract
 ---
 
-## Fermion
-
-_Implementation of the {IFermion} interface._
+## Planet
 
 ***
 
@@ -13,13 +11,11 @@ _Implementation of the {IFermion} interface._
 
 - [Context](/@exoda/contracts/utils/Context)
 - [ERC20](/@exoda/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
 - [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
 - [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IFermion](/contracts/interfaces/IFermion)
 - [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
+- [IPlanet](/contracts/interfaces/IPlanet)
 - [Ownable](/@exoda/contracts/access/Ownable)
 
 ***
@@ -41,6 +37,18 @@ NOTE: {value} may be zero.
 | owner | address | true | (indexed) The owner of the tokens. |
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
+
+#### Enter
+
+```solidity
+event Enter(address sender, uint256 amount, address to)
+```
+
+#### Leave
+
+```solidity
+event Leave(address sender, uint256 amount, address to)
+```
 
 #### OwnershipTransferred
 
@@ -78,15 +86,31 @@ NOTE: {value} may be zero.
 #### constructor
 
 ```solidity
-constructor() public
+constructor(contract IERC20Metadata tokenInit) public
 ```
 
-#### mint
+#### enter
 
 ```solidity
-function mint(address to, uint256 amount) public
+function enter(uint256 amount, address to) external
 ```
 
-Creates `amount` token to `to`. Must only be called by the owner (MagneticFieldGenerator).
+#### leave
+
+```solidity
+function leave(uint256 amount, address to) external
+```
+
+#### token
+
+```solidity
+function token() external view returns (contract IERC20Metadata)
+```
+
+#### name
+
+```solidity
+function name() public view virtual returns (string)
+```
 
 [Back](/index)

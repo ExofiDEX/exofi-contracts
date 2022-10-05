@@ -1,21 +1,39 @@
 ---
-filename: /contracts/interfaces/IFermion
+filename: /contracts/test/WETH9
 type: interface
 ---
 
-## IFermion
+## IWETH9
 
-_Interface of the Fermion token._
+***
+
+### Functions
+
+#### deposit
+
+```solidity
+function deposit() external payable
+```
+
+#### withdraw
+
+```solidity
+function withdraw(uint256 wad) external
+```
+
+---
+filename: /contracts/test/WETH9
+type: contract
+---
+
+## WETH9
 
 ***
 
 ### Implements
 
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
-- [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
+- [IWETH9](/contracts/test/WETH9)
 
 ***
 
@@ -37,18 +55,11 @@ NOTE: {value} may be zero.
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
 
-#### OwnershipTransferred
+#### Deposit
 
 ```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
+event Deposit(address dst, uint256 wad)
 ```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
 
 #### Transfer
 
@@ -66,18 +77,52 @@ NOTE: {value} may be zero.
 | to | address | true | (indexed) The target of the transfer. |
 | value | uint256 | false | The amount of tokens that got transfered. |
 
+#### Withdrawal
+
+```solidity
+event Withdrawal(address src, uint256 wad)
+```
+
 ***
 
 ### Functions
 
-#### mint
+#### deposit
 
 ```solidity
-function mint(address to, uint256 amount) external
+function deposit() public payable
 ```
 
-_Mints `amount` tokens to `account`.
+#### withdraw
 
-Emits a {Transfer} event with `from` set to the zero address._
+```solidity
+function withdraw(uint256 wad) public
+```
+
+#### approve
+
+```solidity
+function approve(address guy, uint256 wad) public returns (bool)
+```
+
+#### transfer
+
+```solidity
+function transfer(address dst, uint256 wad) public returns (bool)
+```
+
+#### transferFrom
+
+```solidity
+function transferFrom(address src, address dst, uint256 wad) public returns (bool)
+```
+
+#### totalSupply
+
+```solidity
+function totalSupply() public view returns (uint256)
+```
+
+_Returns the amount of tokens in existence._
 
 [Back](/index)

@@ -33,19 +33,6 @@ contract MagneticFieldGeneratorStore is IMagneticFieldGeneratorStore, Ownable
 	}
 
 
-	/// @notice Leaves the contract without owner. Can only be called by the current owner.
-	/// This is a dangerous call be aware of the consequences
-	function renounceOwnership() public override(IOwnable, Ownable)
-	{
-		Ownable.renounceOwnership();
-	}
-
-	/// @notice Returns the address of the current owner.
-	function owner() public view override(IOwnable, Ownable) returns (address)
-	{
-		return Ownable.owner();
-	}
-
 	function getPoolInfo(uint256 pid) override external view returns (PoolInfo memory)
 	{
 		return _poolInfo[pid];
@@ -59,5 +46,18 @@ contract MagneticFieldGeneratorStore is IMagneticFieldGeneratorStore, Ownable
 	function getUserInfo(uint256 pid, address user) override external view returns (UserInfo memory)
 	{
 		return _userInfo[pid][user];
+	}
+
+	/// @notice Leaves the contract without owner. Can only be called by the current owner.
+	/// This is a dangerous call be aware of the consequences
+	function renounceOwnership() public override(IOwnable, Ownable)
+	{
+		Ownable.renounceOwnership();
+	}
+
+	/// @notice Returns the address of the current owner.
+	function owner() public view override(IOwnable, Ownable) returns (address)
+	{
+		return Ownable.owner();
 	}
 }

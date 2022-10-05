@@ -1,21 +1,17 @@
 ---
-filename: /contracts/interfaces/IFermion
+filename: /@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata
 type: interface
 ---
 
-## IFermion
+## IERC20Metadata
 
-_Interface of the Fermion token._
+Interface for the optional metadata functions from the ERC20 standard.
 
 ***
 
 ### Implements
 
 - [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
-- [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
 
 ***
 
@@ -37,19 +33,6 @@ NOTE: {value} may be zero.
 | spender | address | true | (indexed) The spender for the tokens. |
 | value | uint256 | false | The amount of tokens that got an allowance. |
 
-#### OwnershipTransferred
-
-```solidity
-event OwnershipTransferred(address previousOwner, address newOwner)
-```
-
-Emitted when ownership is moved from one address to another.
-
-| Name | Type | Indexed | Description |
-| ---- | ---- | ------- | ----------- |
-| previousOwner | address | true | (indexed) The owner of the contract until now. |
-| newOwner | address | true | (indexed) The new owner of the contract. |
-
 #### Transfer
 
 ```solidity
@@ -70,14 +53,40 @@ NOTE: {value} may be zero.
 
 ### Functions
 
-#### mint
+#### name
 
 ```solidity
-function mint(address to, uint256 amount) external
+function name() external view returns (string)
 ```
 
-_Mints `amount` tokens to `account`.
+Returns the name of the token.
 
-Emits a {Transfer} event with `from` set to the zero address._
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | string | The token name. |
+
+#### symbol
+
+```solidity
+function symbol() external view returns (string)
+```
+
+Returns the symbol of the token.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | string | The symbol for the token. |
+
+#### decimals
+
+```solidity
+function decimals() external pure returns (uint8)
+```
+
+Returns the decimals of the token.
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | uint8 | The decimals for the token. |
 
 [Back](/index)

@@ -41,7 +41,6 @@
 				"strict": true
 			}
 		],
-		"func-ordering": "warn",
 		"ordering": "warn",
 		"visibility-modifier-order": "warn",
 		"func-visibility": [
