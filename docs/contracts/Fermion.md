@@ -5,23 +5,22 @@ type: contract
 
 ## Fermion
 
-_Implementation of the {IFermion} interface.
-The IFermion interface extends the IERC20, IERC20Metadata, IERC20Burnable, IOwnable interfaces._
+_Implementation of the {IFermion} interface._
 
 ***
 
 ### Implements
 
-- [Context](/@exoda/exoda-contracts/contracts/utils/Context)
-- [ERC20](/@exoda/exoda-contracts/contracts/token/ERC20/ERC20)
-- [ERC20Burnable](/@exoda/exoda-contracts/contracts/token/ERC20/extensions/ERC20Burnable)
-- [IERC20](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Burnable](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
-- [IERC20Metadata](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
+- [Context](/@exoda/contracts/utils/Context)
+- [ERC20](/@exoda/contracts/token/ERC20/ERC20)
+- [ERC20Burnable](/@exoda/contracts/token/ERC20/extensions/ERC20Burnable)
+- [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
+- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
+- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
+- [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
 - [IFermion](/contracts/interfaces/IFermion)
-- [IOwnable](/@exoda/exoda-contracts/contracts/interfaces/access/IOwnable)
-- [Ownable](/@exoda/exoda-contracts/contracts/access/Ownable)
+- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
+- [Ownable](/@exoda/contracts/access/Ownable)
 
 ***
 
@@ -81,22 +80,6 @@ NOTE: {value} may be zero.
 ```solidity
 constructor() public
 ```
-
-#### burn
-
-```solidity
-function burn(uint256 amount) public
-```
-
-Destroys `amount` tokens from the caller.
-
-#### burnFrom
-
-```solidity
-function burnFrom(address account, uint256 amount) public
-```
-
-Destroys `amount` tokens from `account`, deducting from the caller's allowance.
 
 #### mint
 

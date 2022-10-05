@@ -28,12 +28,22 @@
 		"publish": "ts-node scripts/SetupPackage.ts && npm publish ./package --access public",
 		"prepare": "husky install",
 		"test": "hardhat test",
-		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=2048\" hardhat coverage",
-		"test:gas": "cross-env REPORT_GAS=true yarn test"
+		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" hardhat coverage",
+		"test:gas": "cross-env REPORT_GAS=true npm run test",
+		"deploy:goerli": "hardhat --network goerli deploy",
+		"verify:goerli": "hardhat --network goerli etherscan-verify --solc-input",
+		"export:goerli": "hardhat --network goerli export --export exports/goerli.json",
+		"deploy:ropsten": "hardhat --network ropsten deploy",
+		"verify:ropsten": "hardhat --network ropsten etherscan-verify --solc-input",
+		"export:ropsten": "hardhat --network ropsten export --export exports/ropsten.json",
+		"deploy:rinkeby": "hardhat --network rinkeby deploy",
+		"verify:rinkeby": "hardhat --network rinkeby etherscan-verify --solc-input",
+		"export:rinkeby": "hardhat --network rinkeby export --export exports/rinkeby.json"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^17.0.2",
 		"@commitlint/config-conventional": "^17.0.2",
+		"@exoda/contracts": "^1.0.0",
 		"@nomiclabs/hardhat-ethers": "^2.0.6",
 		"@nomiclabs/hardhat-etherscan": "^3.0.4",
 		"@nomiclabs/hardhat-waffle": "^2.0.3",
@@ -56,8 +66,12 @@
 		"eslint-plugin-node": "^11.1.0",
 		"eslint-plugin-promise": "^6.0.0",
 		"ethereum-waffle": "^3.4.4",
+		"ethereumjs-util": "^7.1.5",
 		"ethers": "^5.6.8",
 		"hardhat": "^2.9.7",
+		"hardhat-abi-exporter": "^2.9.0",
+		"hardhat-deploy": "^0.11.10",
+		"hardhat-deploy-ethers": "^0.3.0-beta.13",
 		"hardhat-gas-reporter": "^1.0.8",
 		"husky": "^8.0.1",
 		"lint-staged": "^13.0.0",
@@ -70,6 +84,6 @@
 		"typescript": "^4.7.2"
 	},
 	"dependencies": {
-		"@exoda/contracts": "^0.0.1"
+		"hardhat-contract-sizer": "^2.6.1"
 	}
 }

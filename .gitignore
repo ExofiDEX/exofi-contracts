@@ -10,6 +10,8 @@
 !/.husky/**/*
 !/.vscode/**/*
 !/contracts/**/*
+!/deploy/**/*
+!/deployments/**/*
 !/docs/**/*
 !/docstatics/**/*
 !/doctemplates/**/*

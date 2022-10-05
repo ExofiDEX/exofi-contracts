@@ -11,10 +11,11 @@ _Interface of the Fermion token._
 
 ### Implements
 
-- [IERC20](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/IERC20)
-- [IERC20AltApprove](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
-- [IERC20Metadata](/@exoda/exoda-contracts/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
-- [IOwnable](/@exoda/exoda-contracts/contracts/interfaces/access/IOwnable)
+- [IERC20](/@exoda/contracts/interfaces/token/ERC20/IERC20)
+- [IERC20AltApprove](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20AltApprove)
+- [IERC20Burnable](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Burnable)
+- [IERC20Metadata](/@exoda/contracts/interfaces/token/ERC20/extensions/IERC20Metadata)
+- [IOwnable](/@exoda/contracts/interfaces/access/IOwnable)
 
 ***
 
@@ -69,37 +70,14 @@ NOTE: {value} may be zero.
 
 ### Functions
 
-#### burn
-
-```solidity
-function burn(uint256 amount) external
-```
-
-_Destroys `amount` tokens from the caller.
-
-Emits a {Transfer} event with `to` set to the zero address.
-
-Requirements:
-- caller must have at least `amount` tokens._
-
-#### burnFrom
-
-```solidity
-function burnFrom(address account, uint256 amount) external
-```
-
-_Destroys `amount` tokens from `account`, deducting from the caller's allowance.
-
-Emits a {Transfer} event with `to` set to the zero address.
-
-Requirements:
-- caller must have allowance for `account` and `amount` or greater.
-- `account` must have at least `amount` tokens._
-
 #### mint
 
 ```solidity
 function mint(address to, uint256 amount) external
 ```
+
+_Mints `amount` tokens to `account`.
+
+Emits a {Transfer} event with `from` set to the zero address._
 
 [Back](/index)

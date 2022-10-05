@@ -16,6 +16,7 @@ describe("Fermion", () =>
 	let Bob: SignerWithAddress;
 	let Carol: SignerWithAddress;
 	let Contract: Contract;
+	const preMine: BigNumber = BigNumber.from(400000000).mul(BigNumber.from(10).pow(18));
 
 	before(async () =>
 	{
@@ -38,13 +39,14 @@ describe("Fermion", () =>
 			await Contract.deployed();
 		});
 
-		it("Fermion.constructor: Should emit OwnershipTransferred event", async () =>
+		it("Fermion.constructor: Should emit OwnershipTransferred and Transfer event", async () =>
 		{
 			// Act
 			const result = Contract.deployTransaction;
 			// Assert
 			await expect(result).to.emit(Contract, "OwnershipTransferred(address,address)").withArgs(ADDRESS_ZERO, Alice.address);
-			await EmitOnlyThis(result, Contract, "OwnershipTransferred(address,address)");
+			await expect(result).to.emit(Contract, "Transfer(address,address,uint256)").withArgs(ADDRESS_ZERO, Alice.address, preMine);
+			await EmitOnlyThis(result, Contract, "OwnershipTransferred(address,address)", "Transfer(address,address,uint256)");
 		});
 
 		it("Fermion.mint: Should allow owner to mint", async () =>
@@ -56,7 +58,7 @@ describe("Fermion", () =>
 			// Assert
 			await expect(result).to.emit(Contract, "Transfer(address,address,uint256)").withArgs(ADDRESS_ZERO, Bob.address, 100);
 			await EmitOnlyThis(result, Contract, "Transfer(address,address,uint256)");
-			expect(await TestOnlyERC20().totalSupply()).to.equal(100);
+			expect(await TestOnlyERC20().totalSupply()).to.equal(preMine.add(100));
 			expect(await TestOnlyERC20().balanceOf(Bob.address)).to.equal(100);
 		});
 
@@ -68,8 +70,22 @@ describe("Fermion", () =>
 
 			// Assert
 			await expect(result).to.revertedWith("Ownable: caller is not the owner");
-			expect(await TestOnlyERC20().totalSupply()).to.equal(0);
+			expect(await TestOnlyERC20().totalSupply()).to.equal(preMine);
 			expect(await TestOnlyERC20().balanceOf(Bob.address)).to.equal(0);
+		});
+
+		it("Fermion.mint: Should not-allow to mint more than max supply", async () =>
+		{
+			// Arrange
+			const maxSupply = BigNumber.from(1000000000).mul(BigNumber.from(10).pow(await Fermion().decimals()));
+			await Fermion().mint(Bob.address, maxSupply.sub(preMine));
+			// Act
+			const result = Fermion().mint(Bob.address, 1);
+
+			// Assert
+			await expect(result).to.revertedWith("Fermion: Max supply reached");
+			expect(await TestOnlyERC20().totalSupply()).to.equal(maxSupply);
+			expect(await TestOnlyERC20().balanceOf(Bob.address)).to.equal(maxSupply.sub(preMine));
 		});
 	});
 
@@ -85,6 +101,7 @@ describe("Fermion", () =>
 		{
 			Contract = await FermionFactory.deploy();
 			await Contract.deployed();
+			await TestOnlyFermion().burn(preMine);
 		});
 
 		it("Fermion.burn: Should emit `Transfer` event", async () =>
@@ -134,7 +151,7 @@ describe("Fermion", () =>
 			await TestOnlyFermion().mint(Alice.address, 100);
 			await TestOnlyFermion().mint(Bob.address, 100);
 			// Act
-			const result = ERC20Burnable().burn(101);
+			const result = ERC20Burnable().burn(preMine.add(101));
 			// Assert
 			await expect(result).to.be.revertedWith("ERC20: burn exceeds balance");
 			expect(await TestOnlyERC20().totalSupply()).to.equal(200);
@@ -234,6 +251,7 @@ describe("Fermion", () =>
 		{
 			Contract = await FermionFactory.deploy();
 			await Contract.deployed();
+			await TestOnlyFermion().burn(preMine);
 		});
 
 		it("Fermion.approve: Should emit `Approval` event", async () =>
@@ -262,35 +280,35 @@ describe("Fermion", () =>
 
 		it("Fermion.approve: Proof of unfixable approve/transferFrom attack vector", async () =>
 		{
-			await TestOnlyFermion().mint(Alice.address, 100);
-			await ERC20().approve(Bob.address, 50);
+			await TestOnlyFermion().mint(Carol.address, 100);
+			await ERC20().connect(Carol).approve(Bob.address, 50);
 			await StopAutomine();
-			// What happens is that Alice is changing the approved tokens from 50 to 30.
-			// Bob notice this before the Transaction of Alice is confirmed and added his on transferFrom transaction.
+			// What happens is that Carol is changing the approved tokens from 50 to 30.
+			// Bob notice this before the Transaction of Carol is confirmed and added his on transferFrom transaction.
 			// The attack is successfull if the transferFrom transaction is confirmed before the approve transaction or
 			// if confirmed in the same block the transferFrom transaction is processed first.
 			// We simulate that second case.
-			await ERC20().connect(Bob).transferFrom(Alice.address, Bob.address, 50);
-			await ERC20().approve(Bob.address, 30);
+			await ERC20().connect(Bob).transferFrom(Carol.address, Bob.address, 50);
+			await ERC20().connect(Carol).approve(Bob.address, 30);
 			await AdvanceBlock();
 			// The Damange is now done. There is no way to prevent this inside the approve method.
 			await StartAutomine();
-			await ERC20().connect(Bob).transferFrom(Alice.address, Bob.address, 30);
+			await ERC20().connect(Bob).transferFrom(Carol.address, Bob.address, 30);
 
-			expect(await ERC20().balanceOf(Alice.address)).to.equal(20);
+			expect(await ERC20().balanceOf(Carol.address)).to.equal(20);
 			expect(await ERC20().balanceOf(Bob.address)).to.equal(80);
 		});
 
 		it("Fermion.balanceOf: Should allow to get balance of tokens.", async () =>
 		{
 			// Arrange
-			await TestOnlyFermion().mint(Alice.address, 25);
+			await TestOnlyFermion().mint(Carol.address, 25);
 			await TestOnlyFermion().mint(Bob.address, 50);
 			// Act
-			const resultAlice = await ERC20().balanceOf(Alice.address);
+			const resultCarol = await ERC20().balanceOf(Carol.address);
 			const resultBob = await ERC20().balanceOf(Bob.address);
 			// Assert
-			expect(resultAlice).to.equal(25);
+			expect(resultCarol).to.equal(25);
 			expect(resultBob).to.equal(50);
 		});
 
@@ -319,15 +337,15 @@ describe("Fermion", () =>
 		it("Fermion.transfer: Should allow token transfer", async () =>
 		{
 			// Arrange
-			await TestOnlyFermion().mint(Alice.address, "100");
+			await TestOnlyFermion().mint(Bob.address, "100");
 			// Act
-			const result = await ERC20().transfer(Carol.address, "10");
+			const result = await ERC20().connect(Bob).transfer(Carol.address, "10");
 			// Assert
 			const totalSupply = await ERC20().totalSupply();
-			const aliceBal = await ERC20().balanceOf(Alice.address);
+			const bobBal = await ERC20().balanceOf(Bob.address);
 			const carolBal = await ERC20().balanceOf(Carol.address);
-			expect(totalSupply.toString()).to.equal("100");
-			expect(aliceBal.toString()).to.equal("90");
+			expect(totalSupply).to.equal(100);
+			expect(bobBal.toString()).to.equal("90");
 			expect(carolBal.toString()).to.equal("10");
 			await EmitOnlyThis(result, Contract, "Transfer(address,address,uint256)");
 		});
@@ -335,14 +353,14 @@ describe("Fermion", () =>
 		it("Fermion.transfer: Should not allow transfer more than balance", async () =>
 		{
 			// Arrange
-			await TestOnlyFermion().mint(Alice.address, "100");
+			await TestOnlyFermion().mint(Bob.address, "100");
 			// Act
-			const result = ERC20().transfer(Carol.address, "110");
+			const result = ERC20().connect(Bob).transfer(Carol.address, "110");
 			// Assert
 			await expect(result).to.be.revertedWith("ERC20: transfer exceeds balance");
-			const aliceBal = await ERC20().balanceOf(Alice.address);
+			const bobBal = await ERC20().balanceOf(Bob.address);
 			const carolBal = await ERC20().balanceOf(Carol.address);
-			expect(aliceBal.toString()).to.equal("100");
+			expect(bobBal.toString()).to.equal("100");
 			expect(carolBal.toString()).to.equal("0");
 		});
 
@@ -371,8 +389,8 @@ describe("Fermion", () =>
 			const aliceBal = await ERC20().balanceOf(Alice.address);
 			const carolBal = await ERC20().balanceOf(Carol.address);
 			const allowance = await ERC20().allowance(Alice.address, Bob.address);
-			expect(totalSupply.toString()).to.equal("100");
-			expect(aliceBal.toString()).to.equal("90");
+			expect(totalSupply).to.equal(100);
+			expect(aliceBal).to.equal(90);
 			expect(carolBal.toString()).to.equal("10");
 			expect(allowance.toString()).to.equal("40");
 			await expect(result).to.emit(Contract, "Approval(address,address,uint256)").withArgs(Alice.address, Bob.address, 40);
@@ -413,7 +431,7 @@ describe("Fermion", () =>
 			const aliceBal = await ERC20().balanceOf(Alice.address);
 			const carolBal = await ERC20().balanceOf(Carol.address);
 			const allowance = await ERC20().allowance(Alice.address, Bob.address);
-			expect(aliceBal.toString()).to.equal("100");
+			expect(aliceBal).to.equal(100);
 			expect(carolBal.toString()).to.equal("0");
 			expect(allowance.toString()).to.equal("200");
 		});
