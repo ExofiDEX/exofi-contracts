@@ -38,7 +38,6 @@ module.exports = async function ({ ethers, getNamedAccounts })
 			await (await mfg.connect(dep).add(alloc, pair, lockPeriod)).wait(2);
 			alloc = 200;
 		}
-
 	}
 };
 
