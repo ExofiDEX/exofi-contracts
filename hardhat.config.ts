@@ -97,6 +97,11 @@ const config: HardhatUserConfig = {
 		}
 	},
 	networks: {
+		mainnet: {
+			url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+			gasPrice: 4000000000,
+			accounts
+		},
 		ropsten: {
 			url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
 			accounts

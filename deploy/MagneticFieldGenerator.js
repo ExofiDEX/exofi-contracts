@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 module.exports = async function ({ ethers, deployments, getNamedAccounts })
 {
 	const { deploy } = deployments;
@@ -7,13 +8,27 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 
 	// Max supply = 1 000 000 000 000000000000000000; // 1 Billion with 18 decimals
 	// premint    =   400 000 000 000000000000000000; // 400 Million with 18 decimals
-	// mint for 4 Years. 1 block ever 14 seconds
+	// mint for 4 Years. 1 block ever 12 seconds
 	// 4 years = 1461 days = 35040 hours = 2102400 minutes = 126144000 seconds
-	// blocks in 4 years ~9010286
+	// blocks in 4 years 10512000
 	// mint in 4 years = supply - premint = 600 000 000 000 000 000 000 000 000 // 600 Million with 18 decimals
-	// mint per block = 600 000 000 000000000000000000 / 9010286 = 66590561054332792543
-	const fermionPerBlock = "60000000000000000000"; // 60 Fermion
-	const startBlock = "0";
+	// mint per block = 600 000 000 000000000000000000 / 10512000 = 57_077_625_570_776_255_708
+	const fermionPerBlock = "50000000000000000000"; // 50 Fermion <- Biggest number that will get you at least 4 years and divides 600M without fraction.
+
+	// eslint-disable-next-line no-undef
+	const chainId = await getChainId();
+	let startBlock = "0";
+	switch (chainId)
+	{
+		case "1": // Mainnet
+			startBlock = "15713777";
+			break;
+		case "5": // Görli
+			startBlock = "0";
+			break;
+		default:
+			throw new Error("Unknown ChainId");
+	}
 
 	console.log("MagneticFieldGenerator - Deploying contracts with deployer: ", deployer);
 	console.log("MagneticFieldGenerator - Deploying contracts with dev: ", dev);
