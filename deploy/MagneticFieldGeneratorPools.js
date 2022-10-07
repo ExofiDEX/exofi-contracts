@@ -33,6 +33,7 @@ module.exports = async function ({ ethers, getNamedAccounts })
 		const factory = await ethers.getContract("ExofiswapFactory");
 		const pairsCount = (await factory.allPairsLength()).toNumber();
 		let alloc = 300; // EXOFI/WETH is the first Pair and gehts a bit more allocPoints
+
 		for (let i = 0; i < pairsCount; ++i)
 		{
 			const pair = await factory.allPairs(i);
@@ -40,6 +41,7 @@ module.exports = async function ({ ethers, getNamedAccounts })
 			await (await mfg.connect(dep).add(alloc, pair, lockPeriod)).wait(2);
 			alloc = 200;
 		}
+
 	}
 };
 

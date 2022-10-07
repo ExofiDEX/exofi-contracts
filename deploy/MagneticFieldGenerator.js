@@ -29,6 +29,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts })
 		default:
 			throw new Error("Unknown ChainId");
 	}
+
 	console.log("MagneticFieldGenerator - Deploying contracts with deployer: ", deployer);
 	console.log("MagneticFieldGenerator - Deploying contracts with dev: ", dev);
 	console.log("MagneticFieldGenerator - Deploying contracts with fermion.address: ", fermion.address);
