@@ -3,11 +3,8 @@ module.exports = async function ({ ethers, getNamedAccounts })
 {
 	const { deployer } = await getNamedAccounts();
 	const fermion = await ethers.getContract("Fermion");
-
 	const dep = fermion.provider.getSigner(deployer);
-
 	const mfg = await ethers.getContract("MagneticFieldGenerator");
-
 	let lockPeriod = 0;
 
 	// eslint-disable-next-line no-undef
