@@ -30,6 +30,8 @@
 		"test": "hardhat test",
 		"test:coverage": "npm run build && cross-env NODE_OPTIONS=\"--max-old-space-size=4096\" hardhat coverage",
 		"test:gas": "cross-env REPORT_GAS=true npm run test",
+		"deploy:mainnet": "hardhat --network mainnet deploy",
+		"verify:mainnet": "hardhat --network mainnet etherscan-verify --solc-input",
 		"deploy:goerli": "hardhat --network goerli deploy",
 		"verify:goerli": "hardhat --network goerli etherscan-verify --solc-input",
 		"export:goerli": "hardhat --network goerli export --export exports/goerli.json",
