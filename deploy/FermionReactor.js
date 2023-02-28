@@ -10,7 +10,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments })
 	await deploy("FermionReactor",
 		{
 			from: deployer,
-			args: ["100000000000000000", "3000000000000000000", fermion.address, "12000"],
+			args: ["100000000000000000", "100000000000000000000", fermion.address, "15525"],
 			log: true,
 			deterministicDeployment: false
 		});

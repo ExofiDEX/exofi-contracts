@@ -45,7 +45,7 @@ const config: HardhatUserConfig = {
 	{
 		path: "./abi",
 		clear: false,
-		flat: true
+		flat: false
 		// only: [],
 		// except: []
 	},
@@ -99,7 +99,7 @@ const config: HardhatUserConfig = {
 	networks: {
 		mainnet: {
 			url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-			gasPrice: 4000000000,
+			gasPrice: 4000000000, // 4 gwei
 			accounts
 		},
 		ropsten: {
@@ -114,6 +114,10 @@ const config: HardhatUserConfig = {
 			url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
 			accounts
 		}
+		// forking: {
+		// url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
+		// accounts
+		// }
 	},
 	gasReporter: {
 		enabled: process.env.REPORT_GAS === "true",
