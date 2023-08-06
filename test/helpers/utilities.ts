@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { BigNumber, Contract } from "ethers";
 import { defaultAbiCoder, getAddress, keccak256, solidityPack, toUtf8Bytes } from "ethers/lib/utils";
 import { getChainId } from "hardhat";

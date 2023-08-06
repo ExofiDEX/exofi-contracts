@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers, network } from "hardhat";
 
 export async function AdvanceBlock()

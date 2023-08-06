@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber, ContractFactory } from "ethers";
@@ -118,7 +117,7 @@ describe("ExofiswapFactory", () =>
 
 		it("pairCodeHash", async () =>
 		{
-			expect(await ExofiswapFactory.pairCodeHash()).eq("0x2b030e03595718f09be5b952e8e9e44159b3fcf385422d5db25485106f124f44");
+			expect(await ExofiswapFactory.pairCodeHash()).eq("0x249895517e40838f4b1dd16d4fcf91c721a6326947a6f8535e3ad8f94a649f81");
 		});
 	});
 });

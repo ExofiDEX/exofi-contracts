@@ -367,6 +367,11 @@ contract MagneticFieldGenerator is IMagneticFieldGenerator, Ownable
 		return _startBlock;
 	}
 
+	function getStore() override external view returns(IMagneticFieldGeneratorStore)
+	{
+		return _store;
+	}
+
 	/// @notice Returns the current migrator.
 	function migrator() override public view returns(IMigratorDevice)
 	{

@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { Contract, ContractFactory } from "ethers";
@@ -70,7 +69,7 @@ describe("UniqueAdressList", () =>
 			// Act
 			await UniqueAddressList().add(ADDRESS_ZERO);
 			// Assert
-			await expect(UniqueAddressList().peek(1)).to.revertedWith(PANIC_CODES.Code_0x32);
+			await expect(UniqueAddressList().peek(1)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
 		});
 
 		it("UniqueAdressList.add: Should not add addresses twice", async () =>
@@ -111,7 +110,7 @@ describe("UniqueAdressList", () =>
 			expect(await UniqueAddressList().peek(0)).to.equal(ADDRESS_ZERO);
 			expect(await UniqueAddressList().peek(1)).to.equal(Alice.address);
 			expect(await UniqueAddressList().peek(2)).to.equal(Bob.address);
-			await expect(UniqueAddressList().peek(3)).to.revertedWith(PANIC_CODES.Code_0x32);
+			await expect(UniqueAddressList().peek(3)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
 
 			expect(await UniqueAddressList().indexOf(ADDRESS_ZERO)).to.equal(0);
 			expect(await UniqueAddressList().indexOf(Alice.address)).to.equal(1);
@@ -131,7 +130,7 @@ describe("UniqueAdressList", () =>
 			expect(await UniqueAddressList().peek(0)).to.equal(ADDRESS_ZERO);
 			expect(await UniqueAddressList().peek(1)).to.equal(Carol.address);
 			expect(await UniqueAddressList().peek(2)).to.equal(Bob.address);
-			await expect(UniqueAddressList().peek(3)).to.revertedWith(PANIC_CODES.Code_0x32);
+			await expect(UniqueAddressList().peek(3)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
 
 			expect(await UniqueAddressList().indexOf(ADDRESS_ZERO)).to.equal(0);
 			expect(await UniqueAddressList().indexOf(Alice.address)).to.equal(0);
@@ -151,7 +150,7 @@ describe("UniqueAdressList", () =>
 			expect(await UniqueAddressList().peek(0)).to.equal(ADDRESS_ZERO);
 			expect(await UniqueAddressList().peek(1)).to.equal(Alice.address);
 			expect(await UniqueAddressList().peek(2)).to.equal(Carol.address);
-			await expect(UniqueAddressList().peek(3)).to.revertedWith(PANIC_CODES.Code_0x32);
+			await expect(UniqueAddressList().peek(3)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
 
 			expect(await UniqueAddressList().indexOf(ADDRESS_ZERO)).to.equal(0);
 			expect(await UniqueAddressList().indexOf(Alice.address)).to.equal(1);
@@ -171,9 +170,9 @@ describe("UniqueAdressList", () =>
 			await UniqueAddressList().remove(Carol.address);
 			// Assert
 			expect(await UniqueAddressList().peek(0)).to.equal(ADDRESS_ZERO);
-			await expect(UniqueAddressList().peek(1)).to.revertedWith(PANIC_CODES.Code_0x32);
-			await expect(UniqueAddressList().peek(2)).to.revertedWith(PANIC_CODES.Code_0x32);
-			await expect(UniqueAddressList().peek(3)).to.revertedWith(PANIC_CODES.Code_0x32);
+			await expect(UniqueAddressList().peek(1)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
+			await expect(UniqueAddressList().peek(2)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
+			await expect(UniqueAddressList().peek(3)).to.revertedWithPanic(PANIC_CODES.ArrayOutOfBounds);
 
 			expect(await UniqueAddressList().indexOf(ADDRESS_ZERO)).to.equal(0);
 			expect(await UniqueAddressList().indexOf(Alice.address)).to.equal(0);

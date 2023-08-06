@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ContractDefinition } from "solidity-ast";
 import { ASTDereferencer, findAll } from "solidity-ast/utils";
 import { DocItemContext, DocItemWithContext, DOC_ITEM_CONTEXT } from "solidity-docgen/dist/site";

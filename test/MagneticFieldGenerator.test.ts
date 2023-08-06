@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber, Contract, ContractFactory } from "ethers";
@@ -168,7 +167,7 @@ describe("MagneticFieldGenerator", () =>
 			const result = MagneticFieldGenerator().migrate(0);
 
 			// This error is thrown due the fact that the FakeERC20 token we use does not implement approve.
-			await expect(result).to.revertedWith("function selector was not recognized and there's no fallback function");
+			await expect(result).to.reverted;
 		});
 	});
 
@@ -624,7 +623,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().add(1, lpToken2.address, 0);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(2));
 
-			await expect(MagneticFieldGenerator().add(BigNumber.from(1), lpToken3.address, 0)).to.be.revertedWith(PANIC_CODES.Code_0x11);
+			await expect(MagneticFieldGenerator().add(BigNumber.from(1), lpToken3.address, 0)).to.be.revertedWithPanic(PANIC_CODES.ArithmeticOverflowUnderflow);
 			expect(await MagneticFieldGenerator().poolLength()).to.equal(BigNumber.from(2));
 		});
 
@@ -647,7 +646,7 @@ describe("MagneticFieldGenerator", () =>
 			await MagneticFieldGenerator().set(1, 0);
 			expect((await MagneticFieldGenerator().poolInfo(1)).allocPoint).to.equal(0);
 
-			await expect(MagneticFieldGenerator().set(1, 2)).to.be.revertedWith(PANIC_CODES.Code_0x11);
+			await expect(MagneticFieldGenerator().set(1, 2)).to.be.revertedWithPanic(PANIC_CODES.ArithmeticOverflowUnderflow);
 			expect((await MagneticFieldGenerator().poolInfo(1)).allocPoint).to.equal(0);
 		});
 

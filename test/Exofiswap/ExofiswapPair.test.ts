@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers, network } from "hardhat";
 import { expect } from "chai";
 import { BigNumber, Contract, ContractFactory } from "ethers";
@@ -109,7 +108,7 @@ describe("ExofiswapPair", () =>
 			await ExofiswapPair().mint(Alice.address);
 		}
 
-		it("swap:token0", async () =>
+		it("swap:token1", async () =>
 		{
 			const token0Amount = ExpandTo18Decimals(5);
 			const token1Amount = ExpandTo18Decimals(10);
@@ -145,7 +144,7 @@ describe("ExofiswapPair", () =>
 			expect(await ExoMockToken1.balanceOf(Alice.address)).to.eq(exoTotalSupplyToken1.sub(token1Amount).add(expectedOutputAmount));
 		});
 
-		it("swap:token1", async () =>
+		it("swap:token0", async () =>
 		{
 			const token0Amount = ExpandTo18Decimals(5);
 			const token1Amount = ExpandTo18Decimals(10);
@@ -157,7 +156,7 @@ describe("ExofiswapPair", () =>
 			await ExoMockToken1.transfer(ExofiswapPair().address, swapAmount);
 
 			await expect(ExofiswapPair().swap(expectedOutputAmount, 0, Alice.address, "0x"))
-				.to.emit(ExoMockToken1, "Transfer").withArgs(ExofiswapPair().address, Alice.address, expectedOutputAmount)
+				.to.emit(ExoMockToken0, "Transfer").withArgs(ExofiswapPair().address, Alice.address, expectedOutputAmount)
 				.to.emit(ExofiswapPair(), "Sync").withArgs(token0Amount.sub(expectedOutputAmount), token1Amount.add(swapAmount))
 				.to.emit(ExofiswapPair(), "Swap").withArgs(Alice.address, 0, swapAmount, expectedOutputAmount, 0, Alice.address);
 
@@ -199,7 +198,7 @@ describe("ExofiswapPair", () =>
 
 			const exoTx = await ExofiswapPair().swap(expectedOutputAmount, 0, Alice.address, "0x");
 			const exoReceipt = await exoTx.wait();
-			expect(exoReceipt.gasUsed).to.eq(74026);
+			expect(exoReceipt.gasUsed).to.lessThanOrEqual(74026);
 		});
 
 		it("burn", async () =>

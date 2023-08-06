@@ -1,18 +1,15 @@
-/* eslint-disable node/no-unpublished-import */
-import * as dotenv from "dotenv";
-import { HardhatUserConfig } from "hardhat/config";
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
+import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-abi-exporter";
 import "hardhat-contract-sizer";
 import "hardhat-deploy";
-import "hardhat-deploy-ethers";
+import "hardhat-tracer";
 import "hardhat-gas-reporter";
-import "solidity-coverage";
 import "solidity-docgen";
+import * as dotenv from "dotenv";
+import { LoadNetworkSpecificValues } from "./scripts/DeployConstants";
 
 import { PageAssigner } from "solidity-docgen/dist/site";
+import { HardhatUserConfig } from "hardhat/types";
 
 const excludePath: RegExp[] = [/\/mocks\//];
 
@@ -30,29 +27,33 @@ const pa: PageAssigner = (item, file, config) =>
 
 dotenv.config();
 
-const accounts = {
-	mnemonic:
-		process.env.MNEMONIC ||
-		"test test test test test test test test test test test junk"
-	// accountsBalance: "990000000000000000000"
-};
+const { accounts, deployer, dev } = LoadNetworkSpecificValues();
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
 	abiExporter:
-	{
-		path: "./abi",
-		clear: false,
-		flat: false
-		// only: [],
-		// except: []
-	},
+		[
+			{
+				runOnCompile: true,
+				path: "./abi/json",
+				clear: true,
+				flat: false,
+				format: "json"
+			},
+			{
+				runOnCompile: true,
+				path: "./abi/compact",
+				clear: true,
+				flat: false,
+				format: "fullName"
+			}
+		],
 	contractSizer:
 	{
-		runOnCompile: true
-		// only: ["Router", "Factory", "Pair"]
+		runOnCompile: true,
+		except: ["contracts/mocks"]
 	},
 	docgen: {
 		pages: pa, // "files",
@@ -61,8 +62,9 @@ const config: HardhatUserConfig = {
 	solidity: {
 		compilers: [
 			{
-				version: "0.8.17",
+				version: "0.8.21",
 				settings: {
+					evmVersion: "paris", // newest evm not supported by coinbase sidechain
 					optimizer: {
 						enabled: true,
 						runs: 500000,
@@ -82,18 +84,14 @@ const config: HardhatUserConfig = {
 			}
 		]
 	},
-	mocha:
-	{
-		timeout: 3600000
-	},
 	namedAccounts:
 	{
 		deployer: {
-			default: process.env.OWNER ?? 0
+			default: deployer ?? 0
 		},
 		dev: {
 			// Default to 1
-			default: process.env.DEVELOPER ?? 1
+			default: dev ?? 1
 		}
 	},
 	networks: {
@@ -102,16 +100,18 @@ const config: HardhatUserConfig = {
 			gasPrice: 4000000000, // 4 gwei
 			accounts
 		},
-		ropsten: {
-			url: `https://ropsten.infura.io/v3/${process.env.INFURA_API_KEY}`,
-			accounts
-		},
-		rinkeby: {
-			url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
-			accounts
-		},
 		goerli: {
 			url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
+			accounts
+		},
+		base_mainnet: {
+			url: "https://mainnet.base.org",
+			gasPrice: 1000000000,
+			accounts
+		},
+		base_goerli: {
+			url: "https://goerli.base.org",
+			gasPrice: 1000000000,
 			accounts
 		}
 		// forking: {

@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";

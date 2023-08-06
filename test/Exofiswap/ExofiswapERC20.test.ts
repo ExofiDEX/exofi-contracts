@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { Contract, ContractFactory, Wallet } from "ethers";

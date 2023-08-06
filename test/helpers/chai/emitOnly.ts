@@ -1,4 +1,3 @@
-/* eslint-disable node/no-unpublished-import */
 import { expect } from "chai";
 import { Contract, ContractTransaction } from "ethers";
 

@@ -66,7 +66,7 @@ library ExofiswapLibrary
 				hex'ff', // CREATE2
 				address(factory), // sender
 				keccak256(abi.encodePacked(tokenL, tokenR)), // salt
-				hex'2b030e03595718f09be5b952e8e9e44159b3fcf385422d5db25485106f124f44' // init code hash keccak256(type(ExofiswapPair).creationCode);
+				hex'249895517e40838f4b1dd16d4fcf91c721a6326947a6f8535e3ad8f94a649f81' // init code hash keccak256(type(ExofiswapPair).creationCode);
 			))))));
 	}
 

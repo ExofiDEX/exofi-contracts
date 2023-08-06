@@ -1,10 +1,8 @@
 {
-  "mochaExplorer.files": "test/**/*.{j,t}s",
-  "mochaExplorer.watch": "test/**/*.{j,t}s",
+  "mochaExplorer.files": "test/**/*.test.ts",
+  "mochaExplorer.watch": "test/**/*.ts",
   "mochaExplorer.parallel": false,
   "mochaExplorer.jobs": 1,
   "mochaExplorer.fullTrace": true,
-  "mochaExplorer.exit": true,
-  "mochaExplorer.require": ["ts-node/register", "hardhat/register"],
-  "mochaExplorer.timeout": 3600000
+  "mochaExplorer.exit": true
 }
