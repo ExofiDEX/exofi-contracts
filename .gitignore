@@ -5,6 +5,7 @@
 # track this file
 !.gitignore
 
+node_modules/
 # whitelist
 !/.github/**/*
 !/.husky/**/*
