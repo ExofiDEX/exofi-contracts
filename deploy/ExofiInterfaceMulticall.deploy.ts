@@ -8,7 +8,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 {
 	await UnifiedDeploy(hre, contract);
 };
- 
+  
 export default func;
 
 func.id = `Deploy_${contract}`;
