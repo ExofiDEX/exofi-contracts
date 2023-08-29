@@ -41,9 +41,9 @@ export function LoadNetworkSpecificValues(): { accounts: string[] | { mnemonic: 
 		}
 		case "base_goerli":
 		{
-			if (process.env.BASEGOERLI_MNEMONIC === undefined) throw Error("Missing environment variable GOERLI_MNEMONIC");
-			if (process.env.BASEGOERLI_OWNER === undefined) throw Error("Missing environment variable GOERLI_OWNER");
-			if (process.env.BASEGOERLI_DEVELOPER === undefined) throw Error("Missing environment variable GOERLI_DEVELOPER");
+			if (process.env.BASEGOERLI_MNEMONIC === undefined) throw Error("Missing environment variable BASEGOERLI_MNEMONIC");
+			if (process.env.BASEGOERLI_OWNER === undefined) throw Error("Missing environment variable BASEGOERLI_OWNER");
+			if (process.env.BASEGOERLI_DEVELOPER === undefined) throw Error("Missing environment variable BASEGOERLI_DEVELOPER");
 			return {
 				accounts: {
 					mnemonic: process.env.BASEGOERLI_MNEMONIC
@@ -53,9 +53,9 @@ export function LoadNetworkSpecificValues(): { accounts: string[] | { mnemonic: 
 		}
 		case "base_main":
 		{
-			if (process.env.BASEMAIN_MNEMONIC === undefined) throw Error("Missing environment variable MAIN_MNEMONIC");
-			if (process.env.BASEMAIN_OWNER === undefined) throw Error("Missing environment variable MAIN_OWNER");
-			if (process.env.BASEMAIN_DEVELOPER === undefined) throw Error("Missing environment variable MAIN_DEVELOPER");
+			if (process.env.BASEMAIN_MNEMONIC === undefined) throw Error("Missing environment variable BASEMAIN_MNEMONIC");
+			if (process.env.BASEMAIN_OWNER === undefined) throw Error("Missing environment variable BASEMAIN_OWNER");
+			if (process.env.BASEMAIN_DEVELOPER === undefined) throw Error("Missing environment variable BASEMAIN_DEVELOPER");
 			return {
 				accounts: {
 					mnemonic: process.env.BASEMAIN_MNEMONIC
